@@ -1,0 +1,235 @@
+package com.nuvio.tv.lumio
+
+// Lumio : client du serveur Lumio (demandes façon Seerr), authentifié avec le jeton Jellyfin
+// de la connexion déjà configurée dans l'appli. Aucune clé Radarr / Sonarr sur la TV.
+
+import android.content.Context
+import com.nuvio.tv.data.mediaserver.ServerRepository
+import com.nuvio.tv.data.mediaserver.ServerSession
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URL
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface LumioEntryPoint {
+    fun serverRepository(): ServerRepository
+}
+
+/** Valeurs identiques à Seerr. */
+object MediaStatus {
+    const val UNKNOWN = 1
+    const val PENDING = 2
+    const val PROCESSING = 3
+    const val PARTIALLY_AVAILABLE = 4
+    const val AVAILABLE = 5
+}
+
+object RequestStatus {
+    const val PENDING = 1
+    const val APPROVED = 2
+    const val DECLINED = 3
+    const val FAILED = 4
+    const val COMPLETED = 5
+}
+
+data class LumioSeason(val number: Int, val status: Int)
+data class LumioRequest(val id: String, val status: Int, val requestedBy: String, val seasons: List<Int>, val mine: Boolean)
+data class LumioMedia(
+    val status: Int,
+    val tmdbId: Int?,
+    val tvdbId: Int?,
+    val seasons: List<LumioSeason>,
+    val requests: List<LumioRequest>
+)
+data class LumioFolder(val path: String, val freeSpace: Long?)
+data class LumioMe(val admin: Boolean, val autoApprove: Boolean, val quotaRemaining: Int?, val quotaLimit: Int, val quotaDays: Int)
+
+class LumioException(message: String) : Exception(message)
+
+class LumioClient(private val context: Context) {
+    private val prefs = context.getSharedPreferences("lumio", Context.MODE_PRIVATE)
+    private val repository: ServerRepository by lazy {
+        EntryPointAccessors.fromApplication(context.applicationContext, LumioEntryPoint::class.java).serverRepository()
+    }
+
+    /** Session Jellyfin active (jeton + adresse), ou null si aucun serveur Jellyfin n'est connecté. */
+    private fun jellyfin(): ServerSession? {
+        val conn = repository.enabledConnections().firstOrNull { it.providerId == "jellyfin" } ?: return null
+        return repository.session(conn.id)
+    }
+
+    var serverUrlOverride: String?
+        get() = prefs.getString("server_url", null)?.takeIf { it.isNotBlank() }
+        set(value) {
+            prefs.edit().putString("server_url", value?.trim()?.trimEnd('/')).apply()
+        }
+
+    /** Adresses candidates du serveur Lumio, devinées depuis celle de Jellyfin. */
+    private fun candidates(jellyfinAddress: String): List<String> {
+        val out = mutableListOf<String>()
+        serverUrlOverride?.let { out += it }
+        runCatching {
+            val uri = URI(jellyfinAddress.trim())
+            val host = uri.host ?: return@runCatching
+            val isIp = host.matches(Regex("""\d+\.\d+\.\d+\.\d+""")) || host == "localhost"
+            if (isIp) out += "http://$host:3456"
+            else {
+                val parts = host.split('.')
+                if (parts.size >= 3) out += "https://lumio." + parts.drop(1).joinToString(".")
+                out += "https://lumio.$host"
+                out += "${uri.scheme ?: "http"}://$host:3456"
+            }
+        }
+        return out.distinct()
+    }
+
+    @Volatile
+    private var resolvedBase: String? = null
+
+    private suspend fun base(session: ServerSession): String {
+        resolvedBase?.let { return it }
+        for (c in candidates(session.connection.address)) {
+            val ok = runCatching {
+                val json = JSONObject(http("GET", "$c/health", null, null))
+                json.optJSONArray("features")?.let { arr -> (0 until arr.length()).any { arr.optString(it) == "requests" } } == true
+            }.getOrDefault(false)
+            if (ok) {
+                resolvedBase = c
+                return c
+            }
+        }
+        throw LumioException("Serveur Lumio introuvable (essayé : ${candidates(session.connection.address).joinToString()})")
+    }
+
+    private fun http(method: String, url: String, token: String?, body: JSONObject?): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.requestMethod = method
+        conn.connectTimeout = 8000
+        conn.readTimeout = 25000
+        conn.setRequestProperty("Accept", "application/json")
+        token?.let { conn.setRequestProperty("X-Jellyfin-Token", it) }
+        if (body != null) {
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.outputStream.use { it.write(body.toString().toByteArray()) }
+        }
+        val code = conn.responseCode
+        val text = (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
+        conn.disconnect()
+        if (code !in 200..299) {
+            val msg = runCatching { JSONObject(text).optString("error") }.getOrNull()?.takeIf { it.isNotBlank() } ?: "HTTP $code"
+            throw LumioException(msg)
+        }
+        return text
+    }
+
+    private suspend fun call(method: String, path: String, body: JSONObject? = null): String = withContext(Dispatchers.IO) {
+        val session = jellyfin() ?: throw LumioException("Connecte d'abord ton serveur Jellyfin (Paramètres → Serveurs média).")
+        http(method, base(session) + path, session.token, body)
+    }
+
+    suspend fun isAvailable(): Boolean = runCatching { withContext(Dispatchers.IO) { jellyfin()?.let { base(it) } != null } }.getOrDefault(false)
+
+    suspend fun media(type: String, tmdbId: Int?, imdbId: String?, seasons: List<Int>): LumioMedia {
+        val q = buildString {
+            append("/api/media?type=").append(type)
+            tmdbId?.let { append("&tmdbId=").append(it) }
+            imdbId?.let { append("&imdbId=").append(it) }
+            if (seasons.isNotEmpty()) append("&seasons=").append(seasons.joinToString(","))
+        }
+        val json = JSONObject(call("GET", q))
+        val me = jellyfin()?.connection?.remoteUserId
+        return LumioMedia(
+            status = json.optInt("status", MediaStatus.UNKNOWN),
+            tmdbId = json.optInt("tmdbId").takeIf { it > 0 },
+            tvdbId = json.optInt("tvdbId").takeIf { it > 0 },
+            seasons = json.optJSONArray("seasons").objects().map { LumioSeason(it.optInt("seasonNumber"), it.optInt("status")) },
+            requests = json.optJSONArray("requests").objects().map {
+                val by = it.optJSONObject("requestedBy")
+                LumioRequest(
+                    id = it.optString("id"),
+                    status = it.optInt("status"),
+                    requestedBy = by?.optString("name").orEmpty(),
+                    seasons = it.optJSONArray("seasons").ints(),
+                    mine = by?.optString("id") == me
+                )
+            }
+        )
+    }
+
+    suspend fun me(): LumioMe {
+        val json = JSONObject(call("GET", "/api/me"))
+        val perm = json.optJSONObject("permissions") ?: JSONObject()
+        val quota = json.optJSONObject("quota")
+        val movie = quota?.optJSONObject("movie")
+        return LumioMe(
+            admin = json.optBoolean("admin"),
+            autoApprove = perm.optBoolean("autoApprove", true),
+            quotaRemaining = movie?.takeIf { !it.isNull("remaining") }?.optInt("remaining"),
+            quotaLimit = movie?.optInt("limit") ?: 0,
+            quotaDays = movie?.optInt("days") ?: 7
+        )
+    }
+
+    suspend fun folders(type: String): Pair<List<LumioFolder>, String?> {
+        val json = JSONObject(call("GET", "/api/arr/options?type=$type"))
+        val list = json.optJSONArray("folders").objects().map {
+            LumioFolder(it.optString("path"), it.optLong("freeSpace").takeIf { v -> v > 0 })
+        }
+        return list to json.optString("default").takeIf { it.isNotBlank() && it != "null" }
+    }
+
+    /** Envoie la demande ; renvoie le statut de la demande créée. */
+    suspend fun request(
+        type: String,
+        tmdbId: Int?,
+        imdbId: String?,
+        tvdbId: Int?,
+        title: String,
+        year: String?,
+        poster: String?,
+        backdrop: String?,
+        seasons: List<Int>,
+        folder: String?
+    ): Int {
+        val body = JSONObject().apply {
+            put("type", type)
+            tmdbId?.let { put("tmdbId", it) }
+            imdbId?.let { put("imdbId", it) }
+            tvdbId?.let { put("tvdbId", it) }
+            put("title", title)
+            year?.let { put("year", it) }
+            poster?.takeIf { it.startsWith("https://") }?.let { put("poster", it) }
+            backdrop?.takeIf { it.startsWith("https://") }?.let { put("backdrop", it) }
+            if (seasons.isNotEmpty()) put("seasons", JSONArray(seasons))
+            folder?.let { put("rootFolderPath", it) }
+        }
+        return JSONObject(call("POST", "/api/requests", body)).optInt("status", RequestStatus.PENDING)
+    }
+
+    suspend fun approve(id: String) { call("POST", "/api/requests/$id/approve", JSONObject()) }
+    suspend fun decline(id: String) { call("POST", "/api/requests/$id/decline", JSONObject()) }
+    suspend fun cancel(id: String) { call("DELETE", "/api/requests/$id") }
+
+    companion object {
+        @Volatile
+        private var instance: LumioClient? = null
+        fun get(context: Context): LumioClient =
+            instance ?: synchronized(this) { instance ?: LumioClient(context.applicationContext).also { instance = it } }
+    }
+}
+
+private fun JSONArray?.objects(): List<JSONObject> =
+    if (this == null) emptyList() else (0 until length()).mapNotNull { optJSONObject(it) }
+
+private fun JSONArray?.ints(): List<Int> =
+    if (this == null) emptyList() else (0 until length()).map { optInt(it) }

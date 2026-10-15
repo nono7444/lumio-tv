@@ -320,6 +320,9 @@ fun HeroContentSection(
                                 onFocused = onHeroActionFocused
                             )
                         }
+
+                        // Lumio : demande façon Seerr via le serveur Lumio
+                        LumioRequestButton(meta = meta, onFocused = onHeroActionFocused)
                     }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))
