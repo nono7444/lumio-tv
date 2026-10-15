@@ -1,6 +1,16 @@
+# Lumio TV
+
+Fork Android TV de [NuvioTV](https://github.com/NuvioMedia/NuvioTV) pour Lumio : Jellyfin, catalogues Stremio et demandes de films et séries via le serveur Lumio. Voir [NOTICE.md](NOTICE.md) pour la liste des modifications. Licence : GPL-3.0.
+
+**Installation** : sur la TV, dans *Downloader*, ouvre `https://github.com/nono7444/lumio-tv/releases/latest/download/lumio-tv.apk`.
+
+---
+
+*README d'origine de NuvioTV :*
+
 <div align="center">
 
-  <img src="assets/brand/app_logo_wordmark.png" alt="Nuvio" width="300" />
+  
 
   <p>
     A free, open-source media app for your phone, your desktop, and the TV you already own.
