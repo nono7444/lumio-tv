@@ -142,7 +142,8 @@ internal abstract class MediaBrowserProvider(
         ItemsResult.serializer(),
         itemQuery(library) + mapOf(
             "genreIds" to genreId?.takeIf { it.isNotEmpty() },
-            "sortBy" to if (library.kind == ServerMediaKind.COLLECTION) "SortName" else "DateCreated,SortName",
+            // Lumio : bibliothèques par date de sortie, de la plus récente à la plus ancienne
+            "sortBy" to if (library.kind == ServerMediaKind.COLLECTION) "SortName" else "PremiereDate,ProductionYear,SortName",
             "sortOrder" to if (library.kind == ServerMediaKind.COLLECTION) "Ascending" else "Descending",
             "startIndex" to start.toString(),
             "limit" to limit.toString(),

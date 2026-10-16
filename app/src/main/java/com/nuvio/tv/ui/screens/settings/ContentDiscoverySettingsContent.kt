@@ -94,7 +94,7 @@ private fun ContentDiscoveryHub(
             subtitle = stringResource(R.string.settings_content_discovery_subtitle)
         )
         SettingsGroupCard(modifier = Modifier.fillMaxWidth()) {
-            SettingsActionRow(
+            if (!com.nuvio.tv.lumio.LumioMode.ENABLED) SettingsActionRow(
                 title = stringResource(R.string.addon_title),
                 subtitle = stringResource(R.string.settings_content_discovery_addons_subtitle),
                 onClick = onNavigateToAddons,
@@ -110,7 +110,15 @@ private fun ContentDiscoveryHub(
                 subtitle = stringResource(R.string.settings_media_servers_subtitle),
                 onClick = onNavigateToServers,
                 leadingIcon = Icons.Default.Dns,
-                modifier = Modifier.focusRequester(serversFocusRequester)
+                modifier = Modifier
+                    .focusRequester(serversFocusRequester)
+                    .then(
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && initialFocusRequester != null) {
+                            Modifier.focusRequester(initialFocusRequester)
+                        } else {
+                            Modifier
+                        }
+                    )
             )
             if (showPlugins) {
                 SettingsActionRow(

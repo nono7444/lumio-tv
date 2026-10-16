@@ -130,7 +130,12 @@ internal fun HomeViewModel.observeTmdbSettingsPipeline() {
 internal fun HomeViewModel.observeInstalledAddonsPipeline() {
     viewModelScope.launch {
         combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
-            installed.enabledAddons() + servers
+            // Lumio : l'accueil n'affiche que Jellyfin ; les addons gardent leurs fiches mais pas leurs catalogues
+            if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                installed.enabledAddons().map { it.copy(catalogs = emptyList()) } + servers
+            } else {
+                installed.enabledAddons() + servers
+            }
         }
             .distinctUntilChanged()
             .collectLatest { addons ->
