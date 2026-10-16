@@ -228,6 +228,9 @@ data class SplashBackground(
 )
 val LocalSplashBackground = compositionLocalOf { SplashBackground() }
 
+/** Lumio : le compte en ligne Nuvio n'existe pas ici, on saute son écran de connexion. */
+private const val LUMIO_NUVIO_ACCOUNT = false
+
 private const val SIDEBAR_AUTO_COLLAPSE_DELAY_MS = 3_000L
 
 private const val MAX_SUPPORTED_FONT_SCALE = 1.15f
@@ -734,6 +737,8 @@ open class MainActivity : ComponentActivity() {
                     if (!surfaceContentReady) {
                         // Still loading auth state; nothing to show yet.
                     } else if (
+                        // Lumio : pas d'écran de connexion au compte Nuvio au premier lancement
+                        LUMIO_NUVIO_ACCOUNT &&
                         hasSeenAuthQrOnFirstLaunch == false &&
                         authState !is AuthState.FullAccount &&
                         !onboardingCompletedThisSession

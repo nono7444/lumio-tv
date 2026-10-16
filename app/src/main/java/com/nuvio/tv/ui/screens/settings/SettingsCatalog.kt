@@ -29,7 +29,8 @@ internal fun visibleSettingsCategories(
     isDebugBuild: Boolean
 ): List<SettingsCategory> = SettingsCategory.entries.filter { category ->
     when (category) {
-        SettingsCategory.ACCOUNT,
+        // Lumio : pas de compte Nuvio (service en ligne de Nuvio), la connexion se fait au serveur Jellyfin
+        SettingsCategory.ACCOUNT -> false
         SettingsCategory.PROFILES -> isPrimaryProfile
         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
         SettingsCategory.EXPERIENCE -> false
