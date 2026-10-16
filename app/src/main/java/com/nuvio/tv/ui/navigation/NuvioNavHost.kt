@@ -1166,6 +1166,10 @@ private fun PlaybackNavHost(
             )
         }
 
+        composable(Screen.LumioRequests.route) {
+            com.nuvio.tv.ui.screens.lumio.LumioRequestsScreen(showBuiltInHeader = !hideBuiltInHeaders)
+        }
+
         composable(Screen.Library.route) {
             LibraryScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,

@@ -16,6 +16,16 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.HourglassTop
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.font.FontWeight
+import com.nuvio.tv.lumio.LumioRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,7 +59,7 @@ import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private fun statusLabel(status: Int): Pair<String, Color>? = when (status) {
+internal fun statusLabel(status: Int): Pair<String, Color>? = when (status) {
     MediaStatus.AVAILABLE -> "Disponible" to Color(0xFF30D158)
     MediaStatus.PARTIALLY_AVAILABLE -> "Partiellement disponible" to Color(0xFF30D158)
     MediaStatus.PROCESSING -> "En cours" to Color(0xFF3D8BFF)
@@ -69,70 +79,180 @@ private fun Meta.lumioTmdb(): Int? =
 private fun Meta.lumioSeasons(): List<Int> =
     videos.mapNotNull { it.season }.filter { it > 0 }.distinct().sorted()
 
-/**
- * Bouton du héros de la fiche : statut (Disponible, En cours, En attente…) et « Demander ».
- * Invisible tant que le serveur Lumio n'est pas joignable (ou sans Jellyfin connecté).
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
+/** État Lumio d'une fiche (statut sur le serveur, demandes, téléchargement), rafraîchi en direct. */
+class LumioMediaState internal constructor(
+    val meta: Meta,
+    val client: LumioClient,
+    val media: LumioMedia?,
+    val reload: () -> Unit
+) {
+    val type: String get() = meta.lumioType()
+
+    /** Lisible depuis Jellyfin (film disponible, ou au moins une saison). */
+    val playable: Boolean
+        get() = media?.let { it.status == MediaStatus.AVAILABLE || it.status == MediaStatus.PARTIALLY_AVAILABLE } == true
+
+    /** Demande validée en cours (recherche, téléchargement, import…). */
+    val active: LumioRequest? get() = media?.requests?.firstOrNull { it.status == RequestStatus.APPROVED }
+    val pending: LumioRequest? get() = media?.requests?.firstOrNull { it.status == RequestStatus.PENDING }
+
+    val canRequest: Boolean
+        get() = media?.let { m ->
+            if (type == "tv") m.seasons.any { it.status == MediaStatus.UNKNOWN } || (m.seasons.isEmpty() && m.status == MediaStatus.UNKNOWN)
+            else m.status == MediaStatus.UNKNOWN
+        } == true
+}
+
 @Composable
-fun LumioRequestButton(meta: Meta, onFocused: () -> Unit = {}) {
+fun rememberLumioMedia(meta: Meta): LumioMediaState {
     val context = LocalContext.current
     val client = remember { LumioClient.get(context) }
-    val scope = rememberCoroutineScope()
     var media by remember(meta.id) { mutableStateOf<LumioMedia?>(null) }
-    var dialog by remember { mutableStateOf(false) }
-    var reload by remember { mutableStateOf(0) }
+    var reload by remember(meta.id) { mutableStateOf(0) }
     val type = meta.lumioType()
 
     LaunchedEffect(meta.id, reload) {
-        media = runCatching {
+        runCatching {
             client.media(type, meta.lumioTmdb(), meta.lumioImdb(), if (type == "tv") meta.lumioSeasons() else emptyList())
-        }.getOrNull()
+        }.getOrNull()?.let { media = it }
     }
+    // Suivi en direct pendant le téléchargement (toutes les 5 s), jusqu'à l'arrivée dans Jellyfin
+    val activeId = media?.requests?.firstOrNull { it.status == RequestStatus.APPROVED }?.id
+    LaunchedEffect(meta.id, activeId) {
+        if (activeId == null) return@LaunchedEffect
+        while (true) {
+            delay(5_000)
+            reload++
+        }
+    }
+    return LumioMediaState(meta, client, media) { reload++ }
+}
 
-    val m = media ?: return
-    val label = statusLabel(m.status)
-    val canRequest = if (type == "tv") m.seasons.any { it.status == MediaStatus.UNKNOWN } || m.seasons.isEmpty() && m.status == MediaStatus.UNKNOWN
-    else m.status == MediaStatus.UNKNOWN
+private val Blue = Color(0xFF3D8BFF)
+private val Green = Color(0xFF30D158)
+private val Orange = Color(0xFFFF9F0A)
 
-    Button(
-        onClick = { if (canRequest) dialog = true },
-        modifier = Modifier.onFocusChanged { if (it.isFocused) onFocused() },
-        colors = ButtonDefaults.colors(
-            containerColor = if (canRequest) Color(0x33FFFFFF) else (label?.second ?: Color(0x33FFFFFF)).copy(alpha = 0.22f),
-            contentColor = if (canRequest) Color.White else (label?.second ?: Color.White),
-            focusedContainerColor = Color.White,
-            focusedContentColor = Color.Black
-        )
-    ) {
-        Icon(
-            imageVector = if (canRequest) Icons.Default.Send else Icons.Default.Check,
-            contentDescription = null,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(
-            when {
-                canRequest && label != null -> "Demander d'autres saisons"
-                canRequest -> "Demander"
-                else -> label?.first ?: "Demandé"
+/**
+ * Bouton principal quand le titre n'est pas (encore) sur le serveur : il remplace « Lire ».
+ * Demander → barre de téléchargement en direct → (le bouton Lire revient tout seul quand c'est prêt).
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun LumioPrimaryButton(
+    state: LumioMediaState,
+    focusRequester: FocusRequester? = null,
+    onFocused: () -> Unit = {}
+) {
+    var dialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val active = state.active
+    val pending = state.pending
+    val d = active?.download
+
+    // Texte, couleur et remplissage de la barre
+    val (text, tint, fill) = when {
+        active != null && d?.state == "downloading" ->
+            Triple("Téléchargement ${d.progress?.let { "$it %" } ?: "…"}" + (if (d.count > 1) " · ${d.count} épisodes" else ""), Blue, (d.progress ?: 0) / 100f)
+        active != null && d?.state == "importing" -> Triple("Ajout au serveur…", Green, 1f)
+        active != null && d?.state == "warning" -> Triple("Bloqué : à vérifier", Orange, 1f)
+        active != null -> Triple("Recherche d'une source…", Blue, 0.06f)
+        pending != null -> Triple("En attente de validation", Orange, 0f)
+        state.canRequest -> Triple("Demander", Color.White, 0f)
+        else -> Triple("Pas encore disponible", Color.White, 0f)
+    }
+    val isRequest = active == null && pending == null && state.canRequest
+    val shape = RoundedCornerShape(50)
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Button(
+            onClick = { if (isRequest) dialog = true else state.reload() },
+            shape = ButtonDefaults.shape(shape),
+            modifier = Modifier
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                .onFocusChanged { if (it.isFocused) onFocused() }
+                .widthIn(min = 260.dp)
+                .clip(shape)
+                .drawBehind {
+                    if (!isRequest) {
+                        drawRect(Color(0x33FFFFFF))
+                        if (fill > 0f) drawRect(tint.copy(alpha = 0.85f), size = Size(size.width * fill.coerceIn(0f, 1f), size.height))
+                    }
+                },
+            colors = if (isRequest) {
+                ButtonDefaults.colors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black,
+                    focusedContainerColor = Color.White,
+                    focusedContentColor = Color.Black
+                )
+            } else {
+                ButtonDefaults.colors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                    focusedContainerColor = Color(0x22FFFFFF),
+                    focusedContentColor = Color.White
+                )
             }
-        )
+        ) {
+            Icon(
+                imageVector = when {
+                    isRequest -> Icons.Default.Send
+                    d?.state == "warning" -> Icons.Default.Warning
+                    pending != null -> Icons.Default.HourglassTop
+                    else -> Icons.Default.Download
+                },
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+            Text(text, fontWeight = FontWeight.Bold)
+        }
+        when {
+            d?.state == "warning" -> Text(
+                "${if (state.type == "tv") "Sonarr" else "Radarr"} : ${d.message ?: "intervention manuelle nécessaire"}",
+                color = Orange,
+                style = MaterialTheme.typography.labelMedium
+            )
+            active != null && d == null || d?.state == "searching" -> Text(
+                "${if (state.type == "tv") "Sonarr" else "Radarr"} cherche une version à télécharger",
+                color = NuvioTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+            pending != null -> Text(
+                "Demandé par ${if (pending.mine) "toi" else pending.requestedBy} · l'admin doit valider",
+                color = NuvioTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
     }
 
-    if (dialog) {
+    val m = state.media
+    if (dialog && m != null) {
         LumioRequestDialog(
-            meta = meta,
+            meta = state.meta,
             media = m,
-            client = client,
+            client = state.client,
             onDismiss = { dialog = false },
             onDone = {
                 dialog = false
                 scope.launch {
                     delay(400)
-                    reload++
+                    state.reload()
                 }
             }
         )
+    }
+}
+
+/**
+ * Bouton secondaire, à côté de « Lire » : pour une série déjà en partie là, demander les autres saisons
+ * (ou suivre leur téléchargement).
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun LumioRequestButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
+    if (state.media == null || !state.playable) return
+    if (state.type == "tv" && (state.canRequest || state.active != null || state.pending != null)) {
+        LumioPrimaryButton(state = state, onFocused = onFocused)
     }
 }
 

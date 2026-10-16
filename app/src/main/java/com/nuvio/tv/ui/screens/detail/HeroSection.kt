@@ -123,6 +123,8 @@ fun HeroContentSection(
     onTruncationChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
+    // Lumio : statut du titre sur le serveur (disponible, demandé, en téléchargement…)
+    val lumio = rememberLumioMedia(meta)
     val isSeriesApi = remember(meta.apiType) {
         meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
     }
@@ -255,7 +257,14 @@ fun HeroContentSection(
                         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PlayButton(
+                        // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
+                            LumioPrimaryButton(
+                                state = lumio,
+                                focusRequester = playButtonFocusRequester,
+                                onFocused = onHeroActionFocused
+                            )
+                        } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
                             enabled = isPlayEnabled,
                             onClick = onPlayClick,
@@ -322,7 +331,7 @@ fun HeroContentSection(
                         }
 
                         // Lumio : demande façon Seerr via le serveur Lumio
-                        LumioRequestButton(meta = meta, onFocused = onHeroActionFocused)
+                        LumioRequestButton(state = lumio, onFocused = onHeroActionFocused)
                     }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))

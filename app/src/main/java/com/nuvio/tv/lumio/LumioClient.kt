@@ -42,13 +42,37 @@ object RequestStatus {
 }
 
 data class LumioSeason(val number: Int, val status: Int)
-data class LumioRequest(val id: String, val status: Int, val requestedBy: String, val seasons: List<Int>, val mine: Boolean)
+/** Suivi Radarr / Sonarr d'une demande validée : searching, downloading, importing, warning. */
+data class LumioDownload(val state: String, val progress: Int?, val message: String?, val count: Int)
+data class LumioRequest(
+    val id: String,
+    val status: Int,
+    val requestedBy: String,
+    val seasons: List<Int>,
+    val mine: Boolean,
+    val download: LumioDownload? = null
+)
 data class LumioMedia(
     val status: Int,
     val tmdbId: Int?,
     val tvdbId: Int?,
     val seasons: List<LumioSeason>,
     val requests: List<LumioRequest>
+)
+/** Une demande de la liste « Demandes ». */
+data class LumioListedRequest(
+    val id: String,
+    val type: String,
+    val title: String,
+    val year: String?,
+    val poster: String?,
+    val status: Int,
+    val requestedBy: String,
+    val mine: Boolean,
+    val seasons: List<Int>,
+    val download: LumioDownload?,
+    val error: String?,
+    val reason: String?
 )
 data class LumioFolder(val path: String, val freeSpace: Long?)
 data class LumioMe(val admin: Boolean, val autoApprove: Boolean, val quotaRemaining: Int?, val quotaLimit: Int, val quotaDays: Int)
@@ -160,7 +184,8 @@ class LumioClient(private val context: Context) {
                     status = it.optInt("status"),
                     requestedBy = by?.optString("name").orEmpty(),
                     seasons = it.optJSONArray("seasons").ints(),
-                    mine = by?.optString("id") == me
+                    mine = by?.optString("id") == me,
+                    download = it.optJSONObject("download")?.toDownload()
                 )
             }
         )
@@ -216,6 +241,31 @@ class LumioClient(private val context: Context) {
         return JSONObject(call("POST", "/api/requests", body)).optInt("status", RequestStatus.PENDING)
     }
 
+    /** filter : all, pending, processing, available, declined, failed */
+    suspend fun list(filter: String = "all"): List<LumioListedRequest> {
+        val json = JSONObject(call("GET", "/api/requests?filter=$filter&take=60"))
+        val me = jellyfin()?.connection?.remoteUserId
+        return json.optJSONArray("results").objects().map {
+            val by = it.optJSONObject("requestedBy")
+            LumioListedRequest(
+                id = it.optString("id"),
+                type = it.optString("type", "movie"),
+                title = it.optString("title"),
+                year = it.optString("year").takeIf { y -> y.isNotBlank() && y != "null" },
+                poster = it.optString("poster").takeIf { p -> p.startsWith("http") },
+                status = it.optInt("status"),
+                requestedBy = by?.optString("name").orEmpty(),
+                mine = by?.optString("id") == me,
+                seasons = it.optJSONArray("seasons").ints(),
+                download = it.optJSONObject("download")?.toDownload(),
+                error = it.optString("error").takeIf { e -> e.isNotBlank() && e != "null" },
+                reason = it.optString("reason").takeIf { e -> e.isNotBlank() && e != "null" }
+            )
+        }
+    }
+
+    suspend fun retry(id: String) { call("POST", "/api/requests/$id/retry", JSONObject()) }
+
     suspend fun approve(id: String) { call("POST", "/api/requests/$id/approve", JSONObject()) }
     suspend fun decline(id: String) { call("POST", "/api/requests/$id/decline", JSONObject()) }
     suspend fun cancel(id: String) { call("DELETE", "/api/requests/$id") }
@@ -233,3 +283,10 @@ private fun JSONArray?.objects(): List<JSONObject> =
 
 private fun JSONArray?.ints(): List<Int> =
     if (this == null) emptyList() else (0 until length()).map { optInt(it) }
+
+private fun JSONObject.toDownload(): LumioDownload = LumioDownload(
+    state = optString("state", "searching"),
+    progress = if (isNull("progress") || !has("progress")) null else optInt("progress"),
+    message = optString("message").takeIf { m -> m.isNotBlank() && m != "null" },
+    count = optInt("count", 1)
+)
