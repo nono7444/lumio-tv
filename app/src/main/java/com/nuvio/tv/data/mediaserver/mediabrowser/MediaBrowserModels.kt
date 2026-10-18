@@ -201,3 +201,15 @@ internal data class PlaybackReport(
     @SerialName("CanSeek") val canSeek: Boolean = true,
     @SerialName("EventName") val eventName: String? = null
 )
+
+@Serializable
+internal data class QuickConnectState(
+    @SerialName("Secret") val secret: String? = null,
+    @SerialName("Code") val code: String? = null,
+    @SerialName("Authenticated") val authenticated: Boolean = false
+)
+
+@Serializable
+internal data class QuickConnectAuth(
+    @SerialName("Secret") val secret: String
+)

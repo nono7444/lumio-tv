@@ -108,11 +108,18 @@ class ServerRepository(
         }
     }
 
-    suspend fun connect(provider: ServerProvider, address: String, username: String, password: String): ServerConnection {
+    suspend fun connect(provider: ServerProvider, address: String, username: String, password: String): ServerConnection =
+        connectWith(provider) { provider.signIn(address, username, password) }
+
+    /** Lumio : connexion par code Quick Connect (le code s'affiche sur la TV, on le valide sur le téléphone). */
+    suspend fun connectQuick(provider: ServerProvider, address: String, onCode: suspend (String) -> Unit): ServerConnection =
+        connectWith(provider) { provider.quickConnect(address, onCode) }
+
+    private suspend fun connectWith(provider: ServerProvider, doSignIn: suspend () -> ServerSignIn): ServerConnection {
         ensureLoaded()
         val startedGeneration = generation
         val profileId = loadedProfileId ?: activeProfileId
-        val signIn = provider.signIn(address, username, password)
+        val signIn = doSignIn()
         val existing = mutableState.value.connections.firstOrNull {
             it.providerId == provider.id &&
                 it.remoteServerId == signIn.serverId &&

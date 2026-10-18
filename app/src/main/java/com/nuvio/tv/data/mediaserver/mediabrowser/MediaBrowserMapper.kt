@@ -58,7 +58,7 @@ internal class MediaBrowserMapper(
             id = ref(seriesId),
             type = ContentType.SERIES,
             name = item.seriesName ?: item.name.orEmpty(),
-            poster = item.seriesPrimaryImageTag?.let { image(seriesId, "Primary", it, maxHeight = 600) },
+            poster = item.seriesPrimaryImageTag?.let { image(seriesId, "Primary", it, maxHeight = 1000) },
             posterShape = PosterShape.POSTER,
             background = item.backdropImage(),
             logo = item.logoImage(),
@@ -126,7 +126,7 @@ internal class MediaBrowserMapper(
         id = ref(item.id),
         title = item.name.orEmpty(),
         released = item.premiereDate,
-        thumbnail = item.imageTags["Primary"]?.let { image(item.id, "Primary", it, maxWidth = 640) },
+        thumbnail = item.imageTags["Primary"]?.let { image(item.id, "Primary", it, maxWidth = 1280) },
         season = item.parentIndexNumber,
         episode = item.indexNumber,
         overview = item.overview,
@@ -166,22 +166,22 @@ internal class MediaBrowserMapper(
                 "tag" to tag,
                 "maxWidth" to maxWidth?.toString(),
                 "maxHeight" to maxHeight?.toString(),
-                "quality" to "90"
+                "quality" to "95"
             )
         )
 
     private fun BaseItem.primaryImage(): String? =
-        imageTags["Primary"]?.let { image(id, "Primary", it, maxHeight = 600) }
+        imageTags["Primary"]?.let { image(id, "Primary", it, maxHeight = 1000) }
 
     private fun BaseItem.backdropImage(): String? =
-        backdropImageTags.firstOrNull()?.let { image(id, "Backdrop/0", it, maxWidth = 1920) }
+        backdropImageTags.firstOrNull()?.let { image(id, "Backdrop/0", it, maxWidth = 2560) }
             ?: parentBackdropItemId?.let { parentId ->
-                parentBackdropImageTags.firstOrNull()?.let { image(parentId, "Backdrop/0", it, maxWidth = 1920) }
+                parentBackdropImageTags.firstOrNull()?.let { image(parentId, "Backdrop/0", it, maxWidth = 2560) }
             }
 
     private fun BaseItem.logoImage(): String? =
-        imageTags["Logo"]?.let { image(id, "Logo", it, maxWidth = 800) }
-            ?: parentLogoItemId?.let { parentId -> parentLogoImageTag?.let { image(parentId, "Logo", it, maxWidth = 800) } }
+        imageTags["Logo"]?.let { image(id, "Logo", it, maxWidth = 1000) }
+            ?: parentLogoItemId?.let { parentId -> parentLogoImageTag?.let { image(parentId, "Logo", it, maxWidth = 1000) } }
 
     private fun BaseItem.releaseInfo(kind: ServerMediaKind): String? {
         val start = productionYear ?: return null

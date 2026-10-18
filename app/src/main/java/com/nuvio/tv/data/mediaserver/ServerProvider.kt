@@ -18,6 +18,9 @@ interface ServerProvider {
 
     suspend fun signIn(address: String, username: String, password: String): ServerSignIn = unsupported()
 
+    /** Lumio : connexion par code (Jellyfin Quick Connect), validée depuis le téléphone. */
+    suspend fun quickConnect(address: String, onCode: suspend (String) -> Unit): ServerSignIn = unsupported()
+
     suspend fun libraries(session: ServerSession): List<ServerLibrary>
 
     suspend fun libraryPage(

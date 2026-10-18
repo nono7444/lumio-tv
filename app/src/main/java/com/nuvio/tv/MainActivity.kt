@@ -327,6 +327,9 @@ open class MainActivity : ComponentActivity() {
     @Inject
     lateinit var deepLinkHandler: DeepLinkHandler
 
+    @Inject
+    lateinit var serverRepository: com.nuvio.tv.data.mediaserver.ServerRepository
+
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
     private val pendingLaunchIntent = MutableStateFlow<Intent?>(null)
 
@@ -404,6 +407,15 @@ open class MainActivity : ComponentActivity() {
             var focusedSplashCacheKey by remember { mutableStateOf<String?>(null) }
             var focusedSplashTheme by remember { mutableStateOf<AppTheme?>(null) }
             var onboardingCompletedThisSession by remember { mutableStateOf(false) }
+            // Lumio : la TV est-elle reliée à Jellyfin ? Sinon, écran de configuration
+            var lumioConfigured by remember {
+                mutableStateOf(
+                    runCatching {
+                        serverRepository.ensureLoaded()
+                        serverRepository.enabledConnections().any { it.providerId == "jellyfin" }
+                    }.getOrDefault(true)
+                )
+            }
             var onboardingProfileSyncInProgress by remember { mutableStateOf(false) }
             val hasSeenAuthQrFlow = remember(appOnboardingDataStore) {
                 appOnboardingDataStore.hasSeenAuthQrOnFirstLaunch.map<Boolean, Boolean?> { it }
@@ -780,6 +792,19 @@ open class MainActivity : ComponentActivity() {
                                 }
                                 if (authManager.authState.value is AuthState.FullAccount) {
                                     startupSyncService.requestSyncNow()
+                                }
+                            }
+                        )
+                    } else if (!lumioConfigured) {
+                        // Lumio : configuration au premier lancement (serveur Lumio + connexion par code)
+                        startupDestination = StartupDestination.Setup
+                        com.nuvio.tv.ui.screens.lumio.LumioSetupScreen(
+                            onDone = {
+                                lifecycleScope.launch {
+                                    layoutPreferenceDataStore.setLayout(com.nuvio.tv.domain.model.HomeLayout.MODERN)
+                                    experienceModeDataStore.setMode(ExperienceMode.ADVANCED)
+                                    experienceModeDataStore.setAddonSetupSkipped(true)
+                                    lumioConfigured = true
                                 }
                             }
                         )

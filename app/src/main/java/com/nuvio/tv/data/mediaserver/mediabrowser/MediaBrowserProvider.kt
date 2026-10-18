@@ -86,6 +86,49 @@ internal abstract class MediaBrowserProvider(
         )
     }
 
+    override suspend fun quickConnect(address: String, onCode: suspend (String) -> Unit): ServerSignIn {
+        val normalized = normalizeServerAddress(address, apiPath) ?: throw ServerException(ServerFailure.NOT_FOUND)
+        val (baseUrl, info) = publicInfo(normalized)
+        if (!isSupported(info)) throw ServerException(ServerFailure.UNSUPPORTED)
+        val api = baseUrl + apiPath
+        val started = client.json.decodeFromString(
+            QuickConnectState.serializer(),
+            client.execute("POST", api, "/QuickConnect/Initiate", token = null).body
+        )
+        val secret = started.secret ?: throw ServerException(ServerFailure.FAILED)
+        onCode(started.code ?: throw ServerException(ServerFailure.FAILED))
+        // Le code est valable quelques minutes : on attend qu'il soit validé depuis le téléphone
+        var ok = false
+        for (attempt in 0 until 200) {
+            kotlinx.coroutines.delay(3000)
+            val state = client.json.decodeFromString(
+                QuickConnectState.serializer(),
+                client.execute("GET", api, "/QuickConnect/Connect", token = null, query = mapOf("secret" to secret)).body
+            )
+            if (state.authenticated) { ok = true; break }
+        }
+        if (!ok) throw ServerException(ServerFailure.AUTH_REQUIRED)
+        val response = client.execute(
+            method = "POST",
+            baseUrl = api,
+            path = "/Users/AuthenticateWithQuickConnect",
+            token = null,
+            body = client.json.encodeToString(QuickConnectAuth.serializer(), QuickConnectAuth(secret))
+        )
+        val result = client.json.decodeFromString(AuthResult.serializer(), response.body)
+        val user = result.user ?: throw ServerException(ServerFailure.AUTH_REQUIRED)
+        val token = result.accessToken?.takeIf { it.isNotBlank() } ?: throw ServerException(ServerFailure.AUTH_REQUIRED)
+        val serverId = result.serverId ?: info.id ?: throw ServerException(ServerFailure.FAILED)
+        return ServerSignIn(
+            address = baseUrl,
+            serverName = info.serverName?.takeIf { it.isNotBlank() } ?: baseUrl.toHttpUrl().host,
+            serverId = serverId,
+            userId = user.id,
+            userName = user.name ?: "",
+            token = token
+        )
+    }
+
     private suspend fun publicInfo(baseUrl: String): Pair<String, PublicInfo> {
         val path = "/System/Info/Public"
         val response = client.execute("GET", baseUrl + apiPath, path, token = null, allowRedirect = true)
