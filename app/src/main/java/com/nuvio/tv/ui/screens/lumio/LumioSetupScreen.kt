@@ -143,9 +143,10 @@ class LumioSetupViewModel @Inject constructor(
             } catch (e: ServerException) {
                 mutable.value = mutable.value.copy(
                     busy = false,
-                    error = when (e.failure) {
-                        ServerFailure.UNREACHABLE, ServerFailure.NOT_FOUND -> "Jellyfin injoignable (${mutable.value.jellyfinUrl})."
-                        ServerFailure.AUTH_REQUIRED -> "Le code a expiré. Réessaie."
+                    error = when {
+                        e.failure == ServerFailure.UNREACHABLE || e.failure == ServerFailure.NOT_FOUND ->
+                            "Jellyfin injoignable (${mutable.value.jellyfinUrl})."
+                        mutable.value.code != null && e.failure == ServerFailure.AUTH_REQUIRED -> "Le code a expiré. Demande un nouveau code."
                         else -> "La connexion par code est désactivée sur Jellyfin (Tableau de bord → Général → Quick Connect). Utilise le mot de passe."
                     }
                 )

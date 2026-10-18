@@ -39,10 +39,15 @@ jobs:
 
       - name: Compile l'APK
         run: |
+          set -o pipefail
           ./gradlew :app:assembleFullRelease \
             -PlumioVersionCode=${{ github.run_number }} \
             -PlumioVersionName=1.0.${{ github.run_number }} \
-            --stacktrace
+            --stacktrace 2>&1 | tee build.log || {
+            grep -E "^e: |error:" build.log | sed "s#^.*/app/src/main/java/##" | sort -u | head -50 > err.txt
+            echo "::error title=Compilation::$(sed 's/%/%25/g' err.txt | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          }
 
       - name: Prépare les fichiers
         run: |
@@ -62,7 +67,7 @@ jobs:
           make_latest: true
           body: |
             Lumio TV 1.0.${{ github.run_number }}
-            Installation : dans Downloader sur la TV, ouvre https://github.com/${{ github.repository }}/releases/latest/download/lumio-tv.apk
+            Installation : dans Downloader sur la TV, ouvre https://github.com/${{ github.repository }}/releases/latest/download/lumio-tv-armeabi-v7a.apk (ou lumio.wawanono.lol/tv)
             Les versions suivantes se proposent toutes seules dans l'appli.
           files: |
             out/lumio-tv.apk
