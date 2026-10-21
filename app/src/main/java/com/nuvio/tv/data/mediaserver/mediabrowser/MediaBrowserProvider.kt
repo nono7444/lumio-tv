@@ -386,9 +386,13 @@ internal abstract class MediaBrowserProvider(
     }
 
     override suspend fun preparePlayback(
-        session: ServerSession,
+        remoteSession: ServerSession,
         request: ServerPlaybackRequest
     ): ServerPlaybackSession {
+        // Lumio : à la maison, lecture sur l'adresse locale de Jellyfin (pas par Internet)
+        val session = com.nuvio.tv.lumio.LumioLan.localBase(remoteSession.connection.address, remoteSession.connection.remoteServerId)
+            ?.let { local -> ServerSession(remoteSession.connection.copy(address = local), remoteSession.token) }
+            ?: remoteSession
         val itemId = request.target.item.itemId
         val body = PlaybackInfoRequest(
             userId = session.userId,

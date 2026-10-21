@@ -161,11 +161,28 @@ fun LumioPrimaryButton(
         else -> Triple("Pas encore disponible", Color.White, 0f)
     }
     val isRequest = active == null && pending == null && state.canRequest
+    // Demande en cours sans téléchargement (recherche, partielle, bloquée) : OK relance la recherche
+    val canRecheck = active != null && (d == null || d.state == "searching" || d.state == "partial" || d.state == "warning")
+    val context = LocalContext.current
+    var rechecking by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(50)
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Button(
-            onClick = { if (isRequest) dialog = true else state.reload() },
+            onClick = {
+                when {
+                    isRequest -> dialog = true
+                    canRecheck && active != null && !rechecking -> scope.launch {
+                        rechecking = true
+                        val msg = runCatching { state.client.recheck(active.id) }.getOrElse { it.message ?: "Relance impossible" }
+                        android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                        rechecking = false
+                        delay(1500)
+                        state.reload()
+                    }
+                    else -> state.reload()
+                }
+            },
             shape = ButtonDefaults.shape(shape),
             modifier = Modifier
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
@@ -212,8 +229,8 @@ fun LumioPrimaryButton(
                 color = Orange,
                 style = MaterialTheme.typography.labelMedium
             )
-            active != null && d == null || d?.state == "searching" -> Text(
-                "${if (state.type == "tv") "Sonarr" else "Radarr"} cherche une version à télécharger",
+            active != null && d == null || d?.state == "searching" || d?.state == "partial" -> Text(
+                if (rechecking) "Relance de la recherche…" else "${if (state.type == "tv") "Sonarr" else "Radarr"} cherche une version à télécharger · OK pour relancer la recherche",
                 color = NuvioTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.labelMedium
             )

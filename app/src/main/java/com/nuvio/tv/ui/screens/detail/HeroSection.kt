@@ -72,6 +72,8 @@ import com.nuvio.tv.ui.components.SynopsisDescription
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalConfiguration
@@ -125,6 +127,30 @@ fun HeroContentSection(
     val context = LocalContext.current
     // Lumio : statut du titre sur le serveur (disponible, demandé, en téléchargement…)
     val lumio = rememberLumioMedia(meta)
+    var showRating by remember(meta.id) { mutableStateOf(false) }
+    var lumioRated by remember(meta.id) { mutableStateOf(false) }
+    val lumioTmdbId = lumio.media?.tmdbId
+    LaunchedEffect(meta.id, lumioTmdbId) {
+        if (lumioTmdbId != null) {
+            lumioRated = runCatching { lumio.client.rating(lumio.type, lumioTmdbId).mine != null }.getOrDefault(false)
+        }
+    }
+    if (showRating && lumioTmdbId != null) {
+        LumioRatingDialog(
+            client = lumio.client,
+            type = lumio.type,
+            tmdbId = lumioTmdbId,
+            title = meta.name,
+            poster = meta.poster,
+            onDismiss = { showRating = false },
+            onChanged = { lumio.reload() }
+        )
+    }
+    LaunchedEffect(showRating) {
+        if (!showRating && lumioTmdbId != null) {
+            lumioRated = runCatching { lumio.client.rating(lumio.type, lumioTmdbId).mine != null }.getOrDefault(lumioRated)
+        }
+    }
     val isSeriesApi = remember(meta.apiType) {
         meta.apiType.equals("series", ignoreCase = true) || meta.apiType.equals("tv", ignoreCase = true)
     }
@@ -277,18 +303,32 @@ fun HeroContentSection(
                             }
                         )
 
-                        ActionIconButton(
-                            icon = if (isInLibrary) Icons.Default.Check else null,
-                            painter = if (!isInLibrary) {
-                                libraryAddPainter
-                            } else {
-                                null
-                            },
-                            contentDescription = if (isInLibrary) stringResource(R.string.hero_remove_from_library) else stringResource(R.string.hero_add_to_library),
-                            onClick = onToggleLibrary,
-                            onLongPress = onLibraryLongPress,
-                            onFocused = onHeroActionFocused
-                        )
+                        // Lumio : « Note » (notes de la famille) à la place de « Ajouter à ma liste » (la bibliothèque, c'est Jellyfin)
+                        val lumioTmdb = lumio.media?.tmdbId
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumioTmdb != null) {
+                            ActionIconButton(
+                                icon = if (lumioRated) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = "Noter",
+                                onClick = { showRating = true },
+                                selected = lumioRated,
+                                selectedContainerColor = Color(0xFFFFC93C),
+                                selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
+                            )
+                        } else if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                            ActionIconButton(
+                                icon = if (isInLibrary) Icons.Default.Check else null,
+                                painter = if (!isInLibrary) {
+                                    libraryAddPainter
+                                } else {
+                                    null
+                                },
+                                contentDescription = if (isInLibrary) stringResource(R.string.hero_remove_from_library) else stringResource(R.string.hero_add_to_library),
+                                onClick = onToggleLibrary,
+                                onLongPress = onLibraryLongPress,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
 
                         if (meta.apiType == "movie") {
                             ActionIconButton(

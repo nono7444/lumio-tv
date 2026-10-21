@@ -77,6 +77,9 @@ data class LumioListedRequest(
 data class LumioFolder(val path: String, val freeSpace: Long?)
 data class LumioMe(val admin: Boolean, val autoApprove: Boolean, val quotaRemaining: Int?, val quotaLimit: Int, val quotaDays: Int)
 
+data class LumioVote(val name: String, val stars: Int, val comment: String?, val mine: Boolean)
+data class LumioRating(val avg: Double?, val count: Int, val mine: Int?, val votes: List<LumioVote>)
+
 class LumioException(message: String) : Exception(message)
 
 class LumioClient(private val context: Context) {
@@ -269,6 +272,34 @@ class LumioClient(private val context: Context) {
     suspend fun approve(id: String) { call("POST", "/api/requests/$id/approve", JSONObject()) }
     suspend fun decline(id: String) { call("POST", "/api/requests/$id/decline", JSONObject()) }
     suspend fun cancel(id: String) { call("DELETE", "/api/requests/$id") }
+
+    /** Relance la recherche Radarr / Sonarr d'une demande en cours (recherche ou partielle). */
+    suspend fun recheck(id: String): String {
+        val json = JSONObject(call("POST", "/api/requests/$id/search", JSONObject()))
+        return json.optString("message").takeIf { it.isNotBlank() } ?: "Recherche relancée"
+    }
+
+    // ——— Notes de la famille (1 à 10 étoiles) ———
+
+    suspend fun rating(type: String, tmdbId: Int): LumioRating {
+        val json = JSONObject(call("GET", "/api/ratings?type=$type&tmdbId=$tmdbId"))
+        val mine = json.optJSONObject("mine")
+        return LumioRating(
+            avg = if (json.isNull("avg")) null else json.optDouble("avg"),
+            count = json.optInt("count"),
+            mine = mine?.optInt("stars")?.takeIf { it > 0 },
+            votes = json.optJSONArray("list").objects().map { v ->
+                LumioVote(name = v.optString("name"), stars = v.optInt("stars"), comment = v.optString("comment").takeIf { it.isNotBlank() }, mine = v.optBoolean("mine"))
+            }
+        )
+    }
+
+    suspend fun rate(type: String, tmdbId: Int, stars: Int, title: String?, poster: String?) {
+        val body = JSONObject().put("type", type).put("tmdbId", tmdbId).put("stars", stars)
+        title?.let { body.put("title", it) }
+        poster?.takeIf { it.startsWith("https://") }?.let { body.put("poster", it) }
+        call("POST", "/api/ratings", body)
+    }
 
     companion object {
         @Volatile

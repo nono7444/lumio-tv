@@ -141,12 +141,18 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
     var showDeleteConfirm by remember(uiState.showManageDialog) { mutableStateOf(false) }
     var expandedPicker by remember { mutableStateOf<String?>(null) }
-    var selectedViewMode by rememberSaveable { mutableStateOf(LibraryViewMode.Saved) }
+    // Lumio : la bibliothèque, ce sont les bibliothèques Jellyfin (films, séries, animés…)
+    var selectedViewMode by rememberSaveable {
+        mutableStateOf(if (com.nuvio.tv.lumio.LumioMode.ENABLED) LibraryViewMode.Servers else LibraryViewMode.Saved)
+    }
     val servers by serversViewModel.servers.collectAsState()
     val serverShelves by serversViewModel.shelves.collectAsState()
     val hasServers = servers.enabledConnections.isNotEmpty()
-    val viewModes = LibraryViewMode.entries.filter { it != LibraryViewMode.Servers || hasServers }
-    val viewMode = selectedViewMode.takeIf { it in viewModes } ?: LibraryViewMode.Saved
+    val viewModes = LibraryViewMode.entries.filter {
+        if (com.nuvio.tv.lumio.LumioMode.ENABLED && hasServers) it == LibraryViewMode.Servers
+        else it != LibraryViewMode.Servers || hasServers
+    }
+    val viewMode = selectedViewMode.takeIf { it in viewModes } ?: viewModes.firstOrNull() ?: LibraryViewMode.Saved
     var activeCloudItem by remember { mutableStateOf<CloudLibraryItem?>(null) }
     var pendingCloudPlayback by remember { mutableStateOf<CloudLibraryPlaybackInfo?>(null) }
     var showCloudPlayerChoice by remember { mutableStateOf(false) }
