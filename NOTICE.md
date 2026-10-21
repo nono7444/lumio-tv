@@ -13,5 +13,8 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Relance de la recherche d'une demande en cours depuis la fiche.
 - Bibliothèque : uniquement les bibliothèques du serveur Jellyfin.
 - Lecture sur l'adresse locale de Jellyfin quand la TV est sur le réseau de la maison.
+- Paramètres réduits à l'état des serveurs, la mise à jour, le thème et la personnalisation de l'accueil.
+- Recherche et fiches via TMDB (clé fournie par le serveur Lumio), affiches Better Posters, notes de la famille sur les affiches.
+- Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

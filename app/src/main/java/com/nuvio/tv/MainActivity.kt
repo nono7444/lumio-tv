@@ -1240,6 +1240,12 @@ open class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            // Lumio : décorations de saison (Halloween, Noël…) sur les écrans principaux, jamais dans le lecteur
+                            com.nuvio.tv.lumio.LumioSeasonalOverlay(
+                                visible = currentRoute != null && currentRoute in rootRoutes,
+                                modifier = Modifier.fillMaxSize()
+                            )
+
                             val autoNextOverlay by externalPlaybackTracker.autoNextOverlay.collectAsState()
                             autoNextOverlay?.let { ov ->
                                 com.nuvio.tv.ui.screens.player.LoadingOverlay(
