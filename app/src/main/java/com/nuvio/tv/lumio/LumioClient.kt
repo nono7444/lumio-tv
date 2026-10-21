@@ -164,6 +164,12 @@ class LumioClient(private val context: Context) {
         http(method, base(session) + path, session.token, body)
     }
 
+    /** État public des serveurs (Lumio, Jellyfin, Radarr, Sonarr) : en ligne, disponibilité sur 24 h. */
+    suspend fun publicStatus(): JSONObject = JSONObject(call("GET", "/status/public"))
+
+    /** Adresse du serveur Lumio trouvée (pour l'afficher). */
+    suspend fun serverAddress(): String? = runCatching { withContext(Dispatchers.IO) { jellyfin()?.let { base(it) } } }.getOrNull()
+
     suspend fun isAvailable(): Boolean = runCatching { withContext(Dispatchers.IO) { jellyfin()?.let { base(it) } != null } }.getOrDefault(false)
 
     suspend fun media(type: String, tmdbId: Int?, imdbId: String?, seasons: List<Int>): LumioMedia {

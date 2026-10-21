@@ -4,6 +4,9 @@ package com.nuvio.tv.ui.screens.lumio
 
 // Lumio : écran « Demandes » (comme sur l'iPhone) : statut, téléchargement en direct, validation par l'admin.
 
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,10 +105,10 @@ fun LumioRequestsScreen(showBuiltInHeader: Boolean = true) {
             .onSuccess { list = it; error = null }
             .onFailure { error = it.message ?: "Serveur Lumio injoignable" }
     }
-    // Rafraîchi toutes les 6 s (pourcentages de téléchargement)
+    // Rafraîchi toutes les 3 s : pourcentages de téléchargement en direct
     LaunchedEffect(Unit) {
         while (true) {
-            delay(6_000)
+            delay(3_000)
             tick++
         }
     }
@@ -156,7 +159,14 @@ fun LumioRequestsScreen(showBuiltInHeader: Boolean = true) {
                         onApprove = { act { client.approve(r.id) } },
                         onDecline = { act { client.decline(r.id) } },
                         onRetry = { act { client.retry(r.id) } },
-                        onCancel = { act { client.cancel(r.id) } }
+                        onCancel = { act { client.cancel(r.id) } },
+                        onRecheck = {
+                            scope.launch {
+                                val msg = runCatching { client.recheck(r.id) }.getOrElse { it.message ?: "Relance impossible" }
+                                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                                tick++
+                            }
+                        }
                     )
                 }
             }
@@ -171,14 +181,23 @@ private fun RequestCard(
     onApprove: () -> Unit,
     onDecline: () -> Unit,
     onRetry: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onRecheck: () -> Unit
 ) {
     val (label, color, progress) = statusOf(r)
+    // Chaque carte peut recevoir le focus : on descend / monte dans la liste avec la télécommande
+    var focused by remember { mutableStateOf(false) }
+    val canRecheck = r.status == RequestStatus.APPROVED &&
+        (r.download == null || r.download.state == "searching" || r.download.state == "partial" || r.download.state == "warning") &&
+        (admin || r.mine)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0x14FFFFFF))
+            .background(if (focused) Color(0x33FFFFFF) else Color(0x14FFFFFF))
+            .border(2.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(16.dp))
+            .onFocusChanged { focused = it.isFocused }
+            .focusable()
             .padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -236,6 +255,9 @@ private fun RequestCard(
                 SmallButton("Réessayer", Icons.Default.Refresh, Blue, onRetry)
             } else if (r.mine && r.status == RequestStatus.PENDING) {
                 SmallButton("Annuler", Icons.Default.Close, Red, onCancel)
+            }
+            if (canRecheck) {
+                SmallButton("Relancer", Icons.Default.Refresh, Blue, onRecheck)
             }
         }
     }

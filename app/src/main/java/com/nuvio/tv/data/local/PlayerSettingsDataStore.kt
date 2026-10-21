@@ -887,7 +887,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 secondaryPreferredAudioLanguage = prefs[secondaryPreferredAudioLanguageKey]
                     ?.let(::normalizeSecondaryAudioLanguageCode),
                 loadingOverlayEnabled = prefs[loadingOverlayEnabledKey] ?: true,
-                showPlayerLoadingStatus = prefs[showPlayerLoadingStatusKey] ?: true,
+                // Lumio : pas de texte « Préparation du flux… », juste l'animation de chargement de Nuvio
+                showPlayerLoadingStatus = if (com.nuvio.tv.lumio.LumioMode.ENABLED) false else prefs[showPlayerLoadingStatusKey] ?: true,
                 playbackIssueReportsEnabled = prefs[playbackIssueReportsEnabledKey] ?: false,
                 pauseOverlayEnabled = prefs[pauseOverlayEnabledKey] ?: true,
                 osdClockEnabled = prefs[osdClockEnabledKey] ?: true,

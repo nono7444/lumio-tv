@@ -384,9 +384,9 @@ fun HeroContentSection(
                                 textDirection = creditLine.contentTextDirection()
                             ),
                             color = NuvioTheme.extendedColors.textSecondary,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(0.6f)
+                            modifier = Modifier.fillMaxWidth(0.7f)
                         )
                         Spacer(modifier = Modifier.height(NuvioTheme.spacing.md))
                     }
@@ -404,7 +404,7 @@ fun HeroContentSection(
                             onFocused = onHeroActionFocused,
                             onTruncationChanged = onTruncationChanged,
                             modifier = Modifier
-                                .fillMaxWidth(0.6f)
+                                .fillMaxWidth(0.7f)
                                 .padding(bottom = NuvioTheme.spacing.md)
                         )
                     }
