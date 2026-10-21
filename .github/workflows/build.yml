@@ -44,8 +44,12 @@ jobs:
             -PlumioVersionCode=${{ github.run_number }} \
             -PlumioVersionName=1.0.${{ github.run_number }} \
             --stacktrace 2>&1 | tee build.log || {
-            grep -E "^e: |error:" build.log | sed "s#^.*/app/src/main/java/##" | sort -u | head -50 > err.txt
-            echo "::error title=Compilation::$(sed 's/%/%25/g' err.txt | awk '{printf "%s%%0A", $0}')"
+            grep -E "^e: |error:" build.log | sed "s#^.*/app/src/main/java/##" | sort -u > err.txt
+            # Une annotation par fichier (GitHub en garde 10), 12 erreurs max par fichier
+            for f in $(cut -d: -f1 err.txt | sed 's#^e: file://##' | sort -u | head -9); do
+              grep -F "$f" err.txt | head -12 > one.txt
+              echo "::error title=$f::$(sed 's/%/%25/g' one.txt | awk '{printf "%s%%0A", $0}')"
+            done
             exit 1
           }
 

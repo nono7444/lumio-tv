@@ -34,18 +34,18 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
-enum class LumioSeason { HALLOWEEN, CHRISTMAS, NEW_YEAR, VALENTINE, EASTER, NONE }
+enum class LumioDecoSeason { HALLOWEEN, CHRISTMAS, NEW_YEAR, VALENTINE, EASTER, NONE }
 
-fun currentLumioSeason(today: LocalDate = LocalDate.now()): LumioSeason {
+fun currentDecoSeason(today: LocalDate = LocalDate.now()): LumioDecoSeason {
     val d = MonthDay.from(today)
     fun inRange(from: MonthDay, to: MonthDay) = !d.isBefore(from) && !d.isAfter(to)
     return when {
-        inRange(MonthDay.of(10, 15), MonthDay.of(11, 2)) -> LumioSeason.HALLOWEEN
-        inRange(MonthDay.of(12, 1), MonthDay.of(12, 26)) -> LumioSeason.CHRISTMAS
-        inRange(MonthDay.of(12, 27), MonthDay.of(12, 31)) || inRange(MonthDay.of(1, 1), MonthDay.of(1, 2)) -> LumioSeason.NEW_YEAR
-        inRange(MonthDay.of(2, 10), MonthDay.of(2, 15)) -> LumioSeason.VALENTINE
-        today.monthValue == 4 && today.dayOfMonth <= 21 -> LumioSeason.EASTER
-        else -> LumioSeason.NONE
+        inRange(MonthDay.of(10, 15), MonthDay.of(11, 2)) -> LumioDecoSeason.HALLOWEEN
+        inRange(MonthDay.of(12, 1), MonthDay.of(12, 26)) -> LumioDecoSeason.CHRISTMAS
+        inRange(MonthDay.of(12, 27), MonthDay.of(12, 31)) || inRange(MonthDay.of(1, 1), MonthDay.of(1, 2)) -> LumioDecoSeason.NEW_YEAR
+        inRange(MonthDay.of(2, 10), MonthDay.of(2, 15)) -> LumioDecoSeason.VALENTINE
+        today.monthValue == 4 && today.dayOfMonth <= 21 -> LumioDecoSeason.EASTER
+        else -> LumioDecoSeason.NONE
     }
 }
 
@@ -54,25 +54,25 @@ private data class Particle(val x: Float, val speed: Float, val size: Float, val
 @Composable
 fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
     if (!LumioMode.ENABLED || !visible) return
-    val season = remember { currentLumioSeason() }
-    if (season == LumioSeason.NONE) return
+    val season = remember { currentDecoSeason() }
+    if (season == LumioDecoSeason.NONE) return
 
     val glyphs = when (season) {
-        LumioSeason.HALLOWEEN -> listOf("🦇", "🦇", "🎃", "👻", "🦇", "🍂")
-        LumioSeason.CHRISTMAS -> emptyList() // neige dessinée
-        LumioSeason.NEW_YEAR -> listOf("✨", "🎉", "✨", "🥂")
-        LumioSeason.VALENTINE -> listOf("❤️", "💕", "💖")
-        LumioSeason.EASTER -> listOf("🥚", "🐣", "🌷")
-        LumioSeason.NONE -> emptyList()
+        LumioDecoSeason.HALLOWEEN -> listOf("🦇", "🦇", "🎃", "👻", "🦇", "🍂")
+        LumioDecoSeason.CHRISTMAS -> emptyList() // neige dessinée
+        LumioDecoSeason.NEW_YEAR -> listOf("✨", "🎉", "✨", "🥂")
+        LumioDecoSeason.VALENTINE -> listOf("❤️", "💕", "💖")
+        LumioDecoSeason.EASTER -> listOf("🥚", "🐣", "🌷")
+        LumioDecoSeason.NONE -> emptyList()
     }
-    val count = if (season == LumioSeason.CHRISTMAS) 70 else 14
+    val count = if (season == LumioDecoSeason.CHRISTMAS) 70 else 14
     val particles = remember(season) {
         val r = Random(season.ordinal * 97 + 7)
         List(count) {
             Particle(
                 x = r.nextFloat(),
                 speed = 0.35f + r.nextFloat() * 0.65f,
-                size = if (season == LumioSeason.CHRISTMAS) 1.5f + r.nextFloat() * 3.5f else 16f + r.nextFloat() * 14f,
+                size = if (season == LumioDecoSeason.CHRISTMAS) 1.5f + r.nextFloat() * 3.5f else 16f + r.nextFloat() * 14f,
                 phase = r.nextFloat(),
                 drift = 0.01f + r.nextFloat() * 0.03f,
                 glyph = if (glyphs.isEmpty()) "" else glyphs[r.nextInt(glyphs.size)]
@@ -83,7 +83,7 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
     val tState = rememberInfiniteTransition(label = "lumioSeason").animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (season == LumioSeason.CHRISTMAS) 14_000 else 22_000, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(if (season == LumioDecoSeason.CHRISTMAS) 14_000 else 22_000, easing = LinearEasing), RepeatMode.Restart),
         label = "lumioSeasonT"
     )
     val twinkleState = rememberInfiniteTransition(label = "lumioTwinkle").animateFloat(
@@ -99,12 +99,12 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
 
         // Lueur de saison sur les bords
         val glow = when (season) {
-            LumioSeason.HALLOWEEN -> Color(0x33FF7A00)
-            LumioSeason.CHRISTMAS -> Color(0x22C8102E)
-            LumioSeason.NEW_YEAR -> Color(0x22FFD54F)
-            LumioSeason.VALENTINE -> Color(0x22FF4F81)
-            LumioSeason.EASTER -> Color(0x2266BB6A)
-            LumioSeason.NONE -> Color.Transparent
+            LumioDecoSeason.HALLOWEEN -> Color(0x33FF7A00)
+            LumioDecoSeason.CHRISTMAS -> Color(0x22C8102E)
+            LumioDecoSeason.NEW_YEAR -> Color(0x22FFD54F)
+            LumioDecoSeason.VALENTINE -> Color(0x22FF4F81)
+            LumioDecoSeason.EASTER -> Color(0x2266BB6A)
+            LumioDecoSeason.NONE -> Color.Transparent
         }
         Canvas(modifier = Modifier.fillMaxSize()) {
             val t = tState.value
@@ -113,7 +113,7 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
             drawRect(Brush.verticalGradient(listOf(Color.Transparent, glow), startY = size.height * 0.8f))
 
             when (season) {
-                LumioSeason.CHRISTMAS -> {
+                LumioDecoSeason.CHRISTMAS -> {
                     // Neige
                     particles.forEach { p ->
                         val y = ((p.phase + t * p.speed) % 1f) * (h + 20f) - 10f
@@ -130,7 +130,7 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
                         drawCircle(colors[i % colors.size].copy(alpha = if (on) 0.9f * twinkle else 0.35f), radius = 5f, center = Offset(x, y))
                     }
                 }
-                LumioSeason.HALLOWEEN -> {
+                LumioDecoSeason.HALLOWEEN -> {
                     // Toiles d'araignée dans les coins du haut
                     val web = Color.White.copy(alpha = 0.18f)
                     for (corner in listOf(Offset(0f, 0f), Offset(w, 0f))) {
@@ -149,7 +149,7 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
         }
 
         // Petits personnages (chauves-souris, citrouilles, cœurs…) qui traversent lentement le haut de l'écran
-        if (season != LumioSeason.CHRISTMAS) {
+        if (season != LumioDecoSeason.CHRISTMAS) {
             particles.forEach { p ->
                 Box(
                     modifier = Modifier
@@ -168,12 +168,12 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
 
         // Clin d'œil dans le coin
         val corner = when (season) {
-            LumioSeason.HALLOWEEN -> "🎃"
-            LumioSeason.CHRISTMAS -> "🎄"
-            LumioSeason.NEW_YEAR -> "🎆"
-            LumioSeason.VALENTINE -> "💝"
-            LumioSeason.EASTER -> "🐰"
-            LumioSeason.NONE -> ""
+            LumioDecoSeason.HALLOWEEN -> "🎃"
+            LumioDecoSeason.CHRISTMAS -> "🎄"
+            LumioDecoSeason.NEW_YEAR -> "🎆"
+            LumioDecoSeason.VALENTINE -> "💝"
+            LumioDecoSeason.EASTER -> "🐰"
+            LumioDecoSeason.NONE -> ""
         }
         Text(corner, fontSize = 34.sp, modifier = Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-18).dp).alpha(0.8f))
     }
