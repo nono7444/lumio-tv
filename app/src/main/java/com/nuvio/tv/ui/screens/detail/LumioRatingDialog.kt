@@ -65,10 +65,12 @@ fun LumioRatingDialog(
     tmdbId: Int,
     title: String,
     poster: String?,
+    imdb: String? = null,
     onDismiss: () -> Unit,
     onChanged: () -> Unit = {}
 ) {
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var info by remember { mutableStateOf<LumioRating?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var stars by remember { mutableIntStateOf(0) }
@@ -90,8 +92,9 @@ fun LumioRatingDialog(
         if (busy) return
         busy = true
         scope.launch {
-            runCatching { client.rate(type, tmdbId, value, title, poster) }
+            runCatching { client.rate(type, tmdbId, value, title, poster, imdb) }
                 .onSuccess {
+                    com.nuvio.tv.lumio.LumioRatingBadges.refresh(context.applicationContext, force = true)
                     onChanged()
                     onDismiss()
                 }

@@ -8,4 +8,10 @@ package com.nuvio.tv.lumio
  */
 object LumioMode {
     const val ENABLED = true
+
+    /** Sans la bibliothèque « Collections » de Jellyfin : Lumio a ses propres sagas (Bibliothèque → Sagas). */
+    fun withoutCollections(addons: List<com.nuvio.tv.domain.model.Addon>): List<com.nuvio.tv.domain.model.Addon> =
+        addons.map { addon ->
+            addon.copy(catalogs = addon.catalogs.filter { it.apiType != com.nuvio.tv.data.mediaserver.ServerMediaKind.COLLECTION.contentType })
+        }
 }

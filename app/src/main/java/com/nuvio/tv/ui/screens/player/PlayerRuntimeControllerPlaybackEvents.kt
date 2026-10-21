@@ -1597,6 +1597,9 @@ fun PlayerRuntimeController.onEvent(event: PlayerEvent) {
         PlayerEvent.OnShowSourcesPanel -> {
             showSourcesPanel()
         }
+        is PlayerEvent.OnSelectServerQuality -> {
+            selectServerQuality(event.maxBitrate)
+        }
         PlayerEvent.OnDismissSourcesPanel -> {
             dismissSourcesPanel()
         }

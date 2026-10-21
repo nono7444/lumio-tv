@@ -142,6 +142,7 @@ fun HeroContentSection(
             tmdbId = lumioTmdbId,
             title = meta.name,
             poster = meta.poster,
+            imdb = meta.imdbId?.takeIf { it.startsWith("tt") } ?: meta.id.takeIf { it.startsWith("tt") }?.substringBefore(':'),
             onDismiss = { showRating = false },
             onChanged = { lumio.reload() }
         )

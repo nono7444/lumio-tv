@@ -7,6 +7,7 @@ package com.nuvio.tv.ui.screens.lumio
 // 2. connexion par code (Jellyfin Quick Connect) validé depuis l'appli Lumio du téléphone,
 //    ou avec identifiant et mot de passe.
 
+import androidx.compose.ui.graphics.asImageBitmap
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -261,25 +262,48 @@ private fun ServerStep(state: LumioSetupState, vm: LumioSetupViewModel) {
 
 @Composable
 private fun CodeStep(state: LumioSetupState, vm: LumioSetupViewModel) {
-    Text("Connecte la TV avec ton téléphone", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-    Box(
-        modifier = Modifier
-            .background(Color(0x22FFFFFF), RoundedCornerShape(20.dp))
-            .padding(horizontal = 40.dp, vertical = 18.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = state.code?.chunked(3)?.joinToString(" ") ?: "· · ·",
-            color = Color.White,
-            fontSize = 64.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 6.sp
-        )
+    Text("Scanne avec ton téléphone", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    // QR code : ouvre l'appli Lumio du téléphone, qui valide la connexion de la TV en un appui
+    val qrUrl = state.code?.let { code ->
+        val base = state.lumioUrl.trim().trimEnd('/').let { if (it.startsWith("http")) it else "https://$it" }
+        "$base/tvlink?code=${code.filter { it.isLetterOrDigit() }}"
     }
-    Text(
-        "Sur ton iPhone ou Android : Lumio → Profil → « Connecter une TV », puis tape ce code.",
-        color = Dim, fontSize = 17.sp, textAlign = TextAlign.Center
-    )
+    val qr = androidx.compose.runtime.remember(qrUrl) {
+        qrUrl?.let { runCatching { com.nuvio.tv.core.qr.QrCodeGenerator.generate(it, 480, margin = 1) }.getOrNull() }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(230.dp)
+                .background(Color.White, RoundedCornerShape(18.dp))
+                .padding(12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (qr != null) {
+                androidx.compose.foundation.Image(
+                    bitmap = qr.asImageBitmap(),
+                    contentDescription = "QR code de connexion",
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Text("…", color = Color.Black, fontSize = 40.sp)
+            }
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.width(300.dp)) {
+            Text(
+                "Ouvre l'appareil photo du téléphone et vise le QR code : Lumio s'ouvre, touche « Connecter la TV ».",
+                color = Dim, fontSize = 16.sp
+            )
+            Text("Ou tape ce code dans Lumio → Profil → « Connecter une TV » :", color = Dim, fontSize = 14.sp)
+            Text(
+                text = state.code?.chunked(3)?.joinToString(" ") ?: "· · ·",
+                color = Color.White,
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 4.sp
+            )
+        }
+    }
     Text("La TV se connecte toute seule dès que le code est validé.", color = Accent, fontSize = 15.sp)
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {

@@ -138,6 +138,15 @@ internal fun PlayerRuntimeController.selectServerSubtitle(index: Int) {
     restartServerStream(R.string.servers_subtitle_switch_failed) { url -> serverPlayback.switchSubtitle(url, index) }
 }
 
+/** Lumio : qualité choisie dans le lecteur (null = originale, sinon débit max : 1080p ≈ 10 Mb/s, 720p ≈ 4 Mb/s). */
+internal fun PlayerRuntimeController.selectServerQuality(maxBitrate: Long?) {
+    if (!serverPlayback.isServerSource(currentStreamUrl)) {
+        Toast.makeText(context, "La qualité se règle seulement pour les vidéos du serveur Jellyfin.", Toast.LENGTH_SHORT).show()
+        return
+    }
+    restartServerStream(R.string.servers_audio_switch_failed) { url -> serverPlayback.switchQuality(url, maxBitrate) }
+}
+
 internal fun PlayerRuntimeController.clearServerSubtitle() {
     persistedTrackPreference = rememberedTrackPreference ?: persistedTrackPreference
     restartServerStream(R.string.servers_subtitle_switch_failed) { url -> serverPlayback.switchSubtitle(url, null) }

@@ -318,7 +318,8 @@ object NetworkModule {
     fun provideTmdbRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
         Retrofit.Builder()
             .baseUrl("https://api.themoviedb.org/3/")
-            .client(okHttpClient)
+            // Lumio : clé TMDB reçue du serveur Lumio (v3 ou jeton v4)
+            .client(okHttpClient.newBuilder().addInterceptor(com.nuvio.tv.lumio.LumioTmdb.interceptor).build())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
 

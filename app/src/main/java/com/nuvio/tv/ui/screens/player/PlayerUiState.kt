@@ -327,6 +327,8 @@ sealed class PlayerEvent {
     data class OnEpisodeAddonFilterSelected(val addonName: String?) : PlayerEvent()
     data class OnEpisodeStreamSelected(val stream: Stream) : PlayerEvent()
     data object OnShowSourcesPanel : PlayerEvent()
+    /** Lumio : qualité (null = originale). */
+    data class OnSelectServerQuality(val maxBitrate: Long?) : PlayerEvent()
     data object OnDismissSourcesPanel : PlayerEvent()
     data object OnReloadSourceStreams : PlayerEvent()
     data class OnSourceAddonFilterSelected(val addonName: String?) : PlayerEvent()

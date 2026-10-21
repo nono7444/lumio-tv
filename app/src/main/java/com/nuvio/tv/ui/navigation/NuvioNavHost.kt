@@ -1166,6 +1166,22 @@ private fun PlaybackNavHost(
             )
         }
 
+        composable(Screen.LumioLive.route) {
+            com.nuvio.tv.ui.screens.lumio.LumioLiveScreen(
+                onPlay = { ch ->
+                    navController.navigate(
+                        Screen.Player.createRoute(
+                            streamUrl = ch.url,
+                            title = ch.name,
+                            streamName = "Live TV",
+                            headers = ch.headers.takeIf { it.isNotEmpty() },
+                            logo = ch.logo
+                        )
+                    )
+                }
+            )
+        }
+
         composable(Screen.LumioRequests.route) {
             com.nuvio.tv.ui.screens.lumio.LumioRequestsScreen(showBuiltInHeader = !hideBuiltInHeaders)
         }
@@ -1215,7 +1231,8 @@ private fun PlaybackNavHost(
                 },
                 onNavigateToLicensesAttributions = {
                     navController.navigate(Screen.LicensesAttributions.route)
-                }
+                },
+                onNavigateToCatalogOrder = { navController.navigate(Screen.CatalogOrder.route) }
             )
         }
 

@@ -49,6 +49,7 @@ import java.time.LocalDate
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1000,7 +1001,10 @@ class MetaDetailsViewModel @Inject constructor(
 
     private suspend fun applyMetaWithEnrichment(meta: Meta) {
         if (!isServerItem) loadMoreLikeThisAsync(meta)
-        val enriched = if (isServerItem) meta else enrichMeta(meta)
+        val enriched = if (isServerItem) {
+            // Lumio : fiche Jellyfin, mais image de fond et logo TMDB (nets, sans texte)
+            if (com.nuvio.tv.lumio.LumioMode.ENABLED) runCatching { lumioTmdbArtwork(meta) }.getOrDefault(meta) else meta
+        } else enrichMeta(meta)
 
         syncEffectiveContentId(enriched)
         val cachedNextToWatch = metaDetailsSessionState.getNextToWatch(
@@ -1536,6 +1540,23 @@ class MetaDetailsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** Lumio : pour une fiche venant de Jellyfin, reprend seulement l'image de fond et le logo de TMDB. */
+    private suspend fun lumioTmdbArtwork(meta: Meta): Meta {
+        if (!com.nuvio.tv.lumio.LumioTmdb.available) return meta
+        val imdb = meta.imdbId?.takeIf { it.startsWith("tt") } ?: return meta
+        val settings = tmdbSettingsDataStore.settings.first()
+        val contentType = resolveTmdbContentType(meta)
+        val tmdbId = tmdbService.ensureTmdbId(imdb, contentType.toApiString(), fallbackImdbId = imdb) ?: return meta
+        val enrichment = withContext(Dispatchers.IO) {
+            tmdbMetadataService.fetchEnrichment(tmdbId = tmdbId, contentType = contentType, language = settings.language)
+        } ?: return meta
+        return meta.copy(
+            background = enrichment.backdrop ?: meta.background,
+            logo = enrichment.logo ?: meta.logo,
+            description = meta.description?.takeIf { it.isNotBlank() } ?: enrichment.description
+        )
     }
 
     private suspend fun enrichMeta(meta: Meta): Meta {

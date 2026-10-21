@@ -31,7 +31,14 @@ class ServerPlayback internal constructor(
 
     suspend fun prepare(target: ServerPlaybackTarget): ServerPlaybackSession {
         val (provider, session, playback) = repository.call(target.item.connectionId) { provider, session ->
-            Triple(provider, session, provider.preparePlayback(session, ServerPlaybackRequest(target, ServerPlayerCapabilities())))
+            Triple(provider, session, provider.preparePlayback(
+                session,
+                ServerPlaybackRequest(
+                    target,
+                    // Lumio : la qualité choisie dans le lecteur s'applique aussi aux vidéos suivantes
+                    com.nuvio.tv.ui.screens.player.LumioQuality.current.let { q -> ServerPlayerCapabilities(allowDirectPlay = q == null, maxBitrate = q) }
+                )
+            ))
         }
         val orphans = synchronized(lock) {
             val unstarted = active.filterValues { !it.started }.keys.toList()
@@ -61,6 +68,18 @@ class ServerPlayback internal constructor(
         val current = url?.let { synchronized(lock) { active[it] } } ?: return null
         if (current.playback.playMethod == ServerPlayMethod.DIRECT_PLAY) return null
         return restart(url, current, current.playback.audioTracks.selectedIndex(), subtitleStreamIndex)
+    }
+
+    /** Lumio : change la qualité (débit max), à la même position ; null = qualité d'origine. */
+    suspend fun switchQuality(url: String?, maxBitrate: Long?): ServerPlaybackSession? {
+        val current = url?.let { synchronized(lock) { active[it] } } ?: return null
+        return restart(
+            url,
+            current,
+            current.playback.audioTracks.selectedIndex(),
+            current.playback.burnInSubtitles.selectedIndex(),
+            ServerPlayerCapabilities(allowDirectPlay = maxBitrate == null, maxBitrate = maxBitrate)
+        )
     }
 
     fun audioTracks(url: String?): List<ServerTrack> {
@@ -103,11 +122,12 @@ class ServerPlayback internal constructor(
         url: String,
         current: ActivePlayback,
         audioStreamIndex: Int?,
-        subtitleStreamIndex: Int?
+        subtitleStreamIndex: Int?,
+        capabilities: ServerPlayerCapabilities = ServerPlayerCapabilities(allowDirectPlay = false)
     ): ServerPlaybackSession? {
         val request = ServerPlaybackRequest(
             target = current.playback.target,
-            capabilities = ServerPlayerCapabilities(allowDirectPlay = false),
+            capabilities = capabilities,
             audioStreamIndex = audioStreamIndex,
             subtitleStreamIndex = subtitleStreamIndex
         )

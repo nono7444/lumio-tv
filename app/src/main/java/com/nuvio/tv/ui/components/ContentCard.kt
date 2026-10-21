@@ -611,6 +611,15 @@ fun ContentCard(
                     )
                 }
 
+                // Lumio : note de la famille en haut à gauche
+                com.nuvio.tv.lumio.LumioRatingBadge(
+                    imdbId = item.imdbId ?: item.id.takeIf { it.startsWith("tt") }?.substringBefore(':'),
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 6.dp, top = 6.dp)
+                        .zIndex(2f)
+                )
+
                 if (isWatched) {
                     WatchedMarker(
                         modifier = Modifier

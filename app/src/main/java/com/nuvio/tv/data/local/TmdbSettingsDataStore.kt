@@ -50,10 +50,10 @@ class TmdbSettingsDataStore @Inject constructor(
     val settings: StateFlow<TmdbSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             TmdbSettings(
-                enabled = prefs[enabledKey] ?: false,
+                enabled = if (com.nuvio.tv.lumio.LumioMode.ENABLED) true else prefs[enabledKey] ?: false,
                 modernHomeEnabled = prefs[modernHomeEnabledKey] ?: false,
                 enrichContinueWatching = prefs[enrichContinueWatchingKey] ?: true,
-                language = prefs[languageKey] ?: "en",
+                language = prefs[languageKey] ?: if (com.nuvio.tv.lumio.LumioMode.ENABLED) "fr" else "en",
                 useArtwork = prefs[useArtworkKey] ?: true,
                 useBasicInfo = prefs[useBasicInfoKey] ?: true,
                 useDetails = prefs[useDetailsKey] ?: true,

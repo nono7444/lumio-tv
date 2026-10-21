@@ -162,7 +162,9 @@ class CatalogOrderViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
-                    installed.enabledAddons() + servers
+                    // Lumio : seulement les rangées Jellyfin (comme l'accueil)
+                    if (com.nuvio.tv.lumio.LumioMode.ENABLED) installed.enabledAddons().map { it.copy(catalogs = emptyList()) } + com.nuvio.tv.lumio.LumioMode.withoutCollections(servers)
+                    else installed.enabledAddons() + servers
                 },
                 collectionsDataStore.collections,
                 layoutPreferenceDataStore.homeCatalogOrderKeys,

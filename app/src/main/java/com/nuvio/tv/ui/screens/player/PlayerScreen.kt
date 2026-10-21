@@ -68,6 +68,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -193,6 +194,8 @@ fun PlayerScreen(
     val postPlayRecommendationFocusRequester = remember { FocusRequester() }
     val postPlayRecommendationPlayerWindowFocusRequester = remember { FocusRequester() }
     var skipButtonActuallyVisible by remember { mutableStateOf(false) }
+    // Lumio : le bouton « Sources » ouvre le choix de la qualité
+    var showLumioQuality by remember { mutableStateOf(false) }
     var restoreStreamInfoFocus by remember { mutableStateOf(false) }
     var focusPlayAfterMoreBack by remember { mutableStateOf(false) }
     var hideControlsAfterStreamInfo by remember { mutableStateOf(false) }
@@ -1367,7 +1370,10 @@ fun PlayerScreen(
                 onSeekBackward = { viewModel.onEvent(PlayerEvent.OnSeekBackward) },
                 onSeekTo = { viewModel.onEvent(PlayerEvent.OnSeekTo(it)) },
                 onShowEpisodesPanel = { viewModel.onEvent(PlayerEvent.OnShowEpisodesPanel) },
-                onShowSourcesPanel = { viewModel.onEvent(PlayerEvent.OnShowSourcesPanel) },
+                onShowSourcesPanel = {
+                    if (com.nuvio.tv.lumio.LumioMode.ENABLED) showLumioQuality = true
+                    else viewModel.onEvent(PlayerEvent.OnShowSourcesPanel)
+                },
                 onShowAudioDialog = { viewModel.onEvent(PlayerEvent.OnShowAudioOverlay) },
                 onShowSubtitleDialog = { viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay) },
                 onShowSpeedDialog = { viewModel.onEvent(PlayerEvent.OnShowSpeedDialog) },
@@ -1654,6 +1660,16 @@ fun PlayerScreen(
                         .align(Alignment.TopCenter)
                 )
             }
+        }
+
+        if (showLumioQuality) {
+            LumioQualityDialog(
+                onPick = { bitrate ->
+                    showLumioQuality = false
+                    viewModel.onEvent(PlayerEvent.OnSelectServerQuality(bitrate))
+                },
+                onDismiss = { showLumioQuality = false }
+            )
         }
 
         // Audio track dialog
@@ -2420,9 +2436,9 @@ private fun PlayerControlsOverlay(
                     }
 
                     ControlButton(
-                        icon = Icons.Default.SwapHoriz,
-                        iconPainter = customSourcePainter,
-                        contentDescription = stringResource(R.string.cd_sources),
+                        icon = if (com.nuvio.tv.lumio.LumioMode.ENABLED) Icons.Default.HighQuality else Icons.Default.SwapHoriz,
+                        iconPainter = if (com.nuvio.tv.lumio.LumioMode.ENABLED) null else customSourcePainter,
+                        contentDescription = if (com.nuvio.tv.lumio.LumioMode.ENABLED) "Qualité" else stringResource(R.string.cd_sources),
                         onClick = onShowSourcesPanel,
                         upFocusRequester = progressUpTarget,
                         onDownKey = onHideControls,

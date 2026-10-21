@@ -88,6 +88,8 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         androidTvChannelSyncService.start()
         serverUserStateProjection.start()
         serverMatcher.start()
+        // Lumio : clé TMDB fournie par le serveur Lumio
+        com.nuvio.tv.lumio.LumioTmdb.start(this)
         // Load locale synchronously so it's available before Activity.attachBaseContext.
         // SharedPreferences reads are fast (cached in memory after first access).
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)

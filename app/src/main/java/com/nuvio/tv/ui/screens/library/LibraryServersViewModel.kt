@@ -31,7 +31,7 @@ data class LibraryServerShelf(
 @HiltViewModel
 class LibraryServersViewModel @Inject constructor(
     private val serverCatalog: ServerCatalog,
-    repository: ServerRepository
+    val repository: ServerRepository
 ) : ViewModel() {
     val servers: StateFlow<ServersUiState> = repository.uiState
     private val _shelves = MutableStateFlow<List<LibraryServerShelf>?>(null)

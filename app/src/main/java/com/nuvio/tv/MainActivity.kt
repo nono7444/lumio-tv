@@ -52,6 +52,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -1066,6 +1067,7 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.Home.route)
                             add(Screen.Search.route)
                             add(Screen.Library.route)
+                            add(Screen.LumioLive.route)
                             add(Screen.LumioRequests.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
@@ -1116,6 +1118,14 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.Library.route,
                                     label = strNavLibrary,
                                     iconRes = R.raw.sidebar_library
+                                )
+                            )
+                            // Lumio : Live TV (sources IPTV ajoutées sur le téléphone)
+                            add(
+                                DrawerItem(
+                                    route = Screen.LumioLive.route,
+                                    label = "Live TV",
+                                    icon = Icons.Default.LiveTv
                                 )
                             )
                             // Lumio : demandes (statut, téléchargement, validation)

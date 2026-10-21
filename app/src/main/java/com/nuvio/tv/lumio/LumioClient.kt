@@ -167,6 +167,18 @@ class LumioClient(private val context: Context) {
     /** État public des serveurs (Lumio, Jellyfin, Radarr, Sonarr) : en ligne, disponibilité sur 24 h. */
     suspend fun publicStatus(): JSONObject = JSONObject(call("GET", "/status/public"))
 
+    /** Sagas de Lumio (collections TMDB des films présents dans Jellyfin), calculées par le serveur. */
+    suspend fun collections(): JSONObject = JSONObject(call("GET", "/api/collections"))
+
+    /** Sources Live TV du compte (ajoutées sur le téléphone). */
+    suspend fun liveSources(): JSONObject = JSONObject(call("GET", "/api/live/sources"))
+
+    /** Moyennes des notes de la famille (clés « movie:123 », « tv:123 » et « imdb:tt… »). */
+    suspend fun ratingSummary(): JSONObject = JSONObject(call("GET", "/api/ratings/summary"))
+
+    /** Clé TMDB partagée par le serveur Lumio (null si l'admin ne l'a pas encore confiée au serveur). */
+    suspend fun tmdbKey(): String? = parseTmdbKey(call("GET", "/api/config/tmdb"))
+
     /** Adresse du serveur Lumio trouvée (pour l'afficher). */
     suspend fun serverAddress(): String? = runCatching { withContext(Dispatchers.IO) { jellyfin()?.let { base(it) } } }.getOrNull()
 
@@ -300,8 +312,9 @@ class LumioClient(private val context: Context) {
         )
     }
 
-    suspend fun rate(type: String, tmdbId: Int, stars: Int, title: String?, poster: String?) {
+    suspend fun rate(type: String, tmdbId: Int, stars: Int, title: String?, poster: String?, imdb: String? = null) {
         val body = JSONObject().put("type", type).put("tmdbId", tmdbId).put("stars", stars)
+        imdb?.takeIf { it.startsWith("tt") }?.let { body.put("imdb", it) }
         title?.let { body.put("title", it) }
         poster?.takeIf { it.startsWith("https://") }?.let { body.put("poster", it) }
         call("POST", "/api/ratings", body)

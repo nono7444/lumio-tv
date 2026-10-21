@@ -160,7 +160,9 @@ data class ServerPlaybackRequest(
 )
 
 data class ServerPlayerCapabilities(
-    val allowDirectPlay: Boolean = true
+    val allowDirectPlay: Boolean = true,
+    /** Lumio : débit maximal choisi (qualité 1080p / 720p) ; null = qualité d'origine. */
+    val maxBitrate: Long? = null
 )
 
 enum class ServerPlayMethod(val wireName: String) {

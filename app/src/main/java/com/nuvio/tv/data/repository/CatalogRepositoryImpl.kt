@@ -28,7 +28,8 @@ class CatalogRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val api: AddonApi,
     private val layoutPreferenceDataStore: LayoutPreferenceDataStore,
-    private val serverCatalog: ServerCatalog
+    private val serverCatalog: ServerCatalog,
+    private val tmdbApi: com.nuvio.tv.data.remote.api.TmdbApi
 ) : CatalogRepository {
     companion object {
         private const val TAG = "CatalogRepository"
@@ -49,9 +50,31 @@ class CatalogRepositoryImpl @Inject constructor(
     ): Flow<NetworkResult<CatalogRow>> = flow {
         emit(NetworkResult.Loading)
 
+        // Lumio : recherche TMDB (films / séries)
+        if (com.nuvio.tv.lumio.LumioTmdbSearch.isTmdbSearch(addonBaseUrl)) {
+            val row = try {
+                com.nuvio.tv.lumio.LumioTmdbSearch.catalog(tmdbApi, addonName, catalogId, catalogName, type, extraArgs)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                emit(NetworkResult.Error(error.message ?: "Recherche TMDB impossible"))
+                return@flow
+            }
+            emit(NetworkResult.Success(row))
+            return@flow
+        }
+
         if (ServerCatalog.isServerAddon(addonBaseUrl)) {
             val row = try {
-                serverCatalog.catalog(addonBaseUrl, addonId, addonName, catalogId, catalogName, type, skip, extraArgs)
+                serverCatalog.catalog(addonBaseUrl, addonId, addonName, catalogId, catalogName, type, skip, extraArgs).let { raw ->
+                    // Lumio : affiches personnalisées (Better Posters) aussi pour les rangées Jellyfin
+                    val pattern = com.nuvio.tv.core.poster.patternForScreen(
+                        layoutPreferenceDataStore.customPosterUrlPattern.first(),
+                        posterScreen,
+                        layoutPreferenceDataStore.customPosterEnabledScreens.first()
+                    )
+                    if (pattern.isBlank()) raw else raw.copy(items = raw.items.withCustomPosterUrls(pattern))
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {

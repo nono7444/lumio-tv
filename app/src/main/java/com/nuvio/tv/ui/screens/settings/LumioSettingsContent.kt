@@ -60,7 +60,7 @@ private fun JSONObject.service(key: String, name: String): ServiceRow? {
 }
 
 @Composable
-fun LumioSettingsContent(initialFocusRequester: FocusRequester? = null) {
+fun LumioSettingsContent(initialFocusRequester: FocusRequester? = null, onNavigateToCatalogOrder: () -> Unit = {}) {
     val context = LocalContext.current
     val client = remember { LumioClient.get(context) }
     var rows by remember { mutableStateOf<List<ServiceRow>>(emptyList()) }
@@ -113,6 +113,13 @@ fun LumioSettingsContent(initialFocusRequester: FocusRequester? = null) {
             ) {
                 // Mise à jour (depuis les Releases de nono7444/lumio-tv)
                 UpdateChannelSettings(initialFocusRequester)
+
+                // Personnalisation de l'accueil : ordre des rangées, rangées masquées
+                SettingsActionRow(
+                    title = "Personnaliser l'accueil",
+                    subtitle = "Choisir les rangées affichées et leur ordre",
+                    onClick = onNavigateToCatalogOrder
+                )
 
                 Text(
                     "Serveurs",

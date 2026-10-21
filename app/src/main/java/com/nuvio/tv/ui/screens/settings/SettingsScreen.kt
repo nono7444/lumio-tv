@@ -175,6 +175,7 @@ fun SettingsScreen(
     onNavigateToManageProfiles: () -> Unit = {},
     onNavigateToSupportersContributors: () -> Unit = {},
     onNavigateToLicensesAttributions: () -> Unit = {},
+    onNavigateToCatalogOrder: () -> Unit = {},
     profileViewModel: ProfileSettingsViewModel = hiltViewModel(),
     experienceModeViewModel: ExperienceModeSettingsViewModel = hiltViewModel()
 ) {
@@ -633,7 +634,8 @@ fun SettingsScreen(
                                 onNavigateToPlugins = onNavigateToPlugins,
                                 onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
                                 onNavigateToSupportersContributors = onNavigateToSupportersContributors,
-                                onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
+                                onNavigateToLicensesAttributions = onNavigateToLicensesAttributions,
+                                onNavigateToCatalogOrder = onNavigateToCatalogOrder
                             )
                         }
                     }
@@ -783,7 +785,8 @@ fun SettingsScreen(
                         onNavigateToPlugins = onNavigateToPlugins,
                         onNavigateToAuthQrSignIn = onNavigateToAuthQrSignIn,
                         onNavigateToSupportersContributors = onNavigateToSupportersContributors,
-                        onNavigateToLicensesAttributions = onNavigateToLicensesAttributions
+                        onNavigateToLicensesAttributions = onNavigateToLicensesAttributions,
+                        onNavigateToCatalogOrder = onNavigateToCatalogOrder
                     )
                 }
             }
@@ -811,11 +814,13 @@ private fun SettingsDetailPane(
     onNavigateToPlugins: () -> Unit,
     onNavigateToAuthQrSignIn: () -> Unit,
     onNavigateToSupportersContributors: () -> Unit,
-    onNavigateToLicensesAttributions: () -> Unit
+    onNavigateToLicensesAttributions: () -> Unit,
+    onNavigateToCatalogOrder: () -> Unit = {}
 ) {
     when (selectedCategory) {
         SettingsCategory.LUMIO -> LumioSettingsContent(
-            initialFocusRequester = if (allowDetailAutofocus) contentFocusRequesters[SettingsCategory.LUMIO] else null
+            initialFocusRequester = if (allowDetailAutofocus) contentFocusRequesters[SettingsCategory.LUMIO] else null,
+            onNavigateToCatalogOrder = onNavigateToCatalogOrder
         )
         SettingsCategory.EXPERIENCE -> EssentialAdvancedSettingsContent(
             experienceModeViewModel = experienceModeViewModel,

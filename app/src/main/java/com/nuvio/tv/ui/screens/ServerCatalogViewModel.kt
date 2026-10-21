@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.mediaserver.ServerCatalog
+import com.nuvio.tv.core.poster.withCustomPosterUrls
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.mergeCatalogPage
@@ -58,7 +59,12 @@ class ServerCatalogViewModel @Inject constructor(
 
     private suspend fun loadOrNull(block: suspend () -> CatalogRow?): CatalogRow? =
         try {
-            block()
+            // Lumio : affiches Better Posters aussi dans la bibliothèque complète
+            block()?.let { row ->
+                if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                    row.copy(items = row.items.withCustomPosterUrls(com.nuvio.tv.lumio.LumioPosters.PATTERN))
+                } else row
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {

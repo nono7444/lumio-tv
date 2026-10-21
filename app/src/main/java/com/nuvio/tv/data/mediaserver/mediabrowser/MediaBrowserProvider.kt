@@ -399,8 +399,8 @@ internal abstract class MediaBrowserProvider(
             mediaSourceId = request.target.mediaSourceId,
             audioStreamIndex = request.audioStreamIndex,
             subtitleStreamIndex = request.subtitleStreamIndex,
-            maxStreamingBitrate = MAX_STREAMING_BITRATE,
-            enableDirectPlay = request.capabilities.allowDirectPlay,
+            maxStreamingBitrate = request.capabilities.maxBitrate ?: MAX_STREAMING_BITRATE,
+            enableDirectPlay = request.capabilities.allowDirectPlay && request.capabilities.maxBitrate == null,
             deviceProfile = deviceProfile(request.capabilities)
         )
         val response = client.execute(
@@ -601,7 +601,7 @@ internal abstract class MediaBrowserProvider(
 
     private fun deviceProfile(capabilities: ServerPlayerCapabilities) = DeviceProfile(
         name = "Nuvio",
-        maxStreamingBitrate = MAX_STREAMING_BITRATE,
+        maxStreamingBitrate = capabilities.maxBitrate ?: MAX_STREAMING_BITRATE,
         directPlayProfiles = if (capabilities.allowDirectPlay) {
             listOf(DirectPlayProfile())
         } else {

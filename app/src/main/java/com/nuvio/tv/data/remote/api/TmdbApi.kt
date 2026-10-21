@@ -222,6 +222,25 @@ interface TmdbApi {
         @Query("page") page: Int = 1
     ): Response<TmdbListDetailsResponse>
 
+    // Lumio : recherche de films et de séries (remplace Cinemeta)
+    @GET("search/movie")
+    suspend fun searchMovies(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("language") language: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false
+    ): Response<TmdbDiscoverResponse>
+
+    @GET("search/tv")
+    suspend fun searchTv(
+        @Query("api_key") apiKey: String,
+        @Query("query") query: String,
+        @Query("language") language: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false
+    ): Response<TmdbDiscoverResponse>
+
     @GET("search/company")
     suspend fun searchCompanies(
         @Query("api_key") apiKey: String,

@@ -153,6 +153,23 @@ fun LibraryScreen(
         else it != LibraryViewMode.Servers || hasServers
     }
     val viewMode = selectedViewMode.takeIf { it in viewModes } ?: viewModes.firstOrNull() ?: LibraryViewMode.Saved
+
+    // Lumio : grandes tuiles par bibliothèque Jellyfin ; une tuile ouvre toute la bibliothèque (plus récent → plus ancien)
+    if (com.nuvio.tv.lumio.LumioMode.ENABLED && hasServers) {
+        LumioLibraryTiles(
+            repository = serversViewModel.repository,
+            connections = servers.enabledConnections,
+            onOpen = { tile ->
+                onNavigateToCatalogSeeAll(
+                    tile.library.id,
+                    com.nuvio.tv.data.mediaserver.ServerCatalog.addonId(tile.connection.id),
+                    tile.library.kind.contentType
+                )
+            },
+            onOpenDetail = { itemId, type, baseUrl -> onNavigateToDetail(itemId, type, baseUrl) }
+        )
+        return
+    }
     var activeCloudItem by remember { mutableStateOf<CloudLibraryItem?>(null) }
     var pendingCloudPlayback by remember { mutableStateOf<CloudLibraryPlaybackInfo?>(null) }
     var showCloudPlayerChoice by remember { mutableStateOf(false) }
