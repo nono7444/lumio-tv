@@ -434,8 +434,9 @@ class LayoutPreferenceDataStore @Inject constructor(
 
     /** Custom poster URL pattern with `{placeholder}` tokens. Empty string means disabled. */
     val customPosterUrlPattern: Flow<String> = profileFlow { prefs ->
-        // Lumio : affiches « Better Posters » (genre), la note affichée est celle de la famille
-        prefs[customPosterUrlPatternKey] ?: if (com.nuvio.tv.lumio.LumioMode.ENABLED) com.nuvio.tv.lumio.LumioPosters.PATTERN else ""
+        // Lumio : affiches TMDB pour tout (plus de Better Posters, même s'il avait été enregistré par une ancienne version)
+        val stored = prefs[customPosterUrlPatternKey] ?: ""
+        if (com.nuvio.tv.lumio.LumioMode.ENABLED && stored.contains("btttr.cc")) "" else stored
     }
 
     val customPosterEnabledScreens: Flow<Set<com.nuvio.tv.core.poster.CustomPosterScreen>> = profileFlow { prefs ->

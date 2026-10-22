@@ -46,7 +46,7 @@ internal class MediaBrowserMapper(
             imdbRating = item.communityRating?.formatRating(),
             genres = item.genres,
             released = item.premiereDate?.take(10),
-            // Lumio : identifiant IMDb pour les affiches Better Posters et les notes de la famille
+            // Lumio : identifiant IMDb pour les notes de la famille
             imdbId = item.externalIds().imdb
         )
     }

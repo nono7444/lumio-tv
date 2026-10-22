@@ -14,7 +14,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Bibliothèque : uniquement les bibliothèques du serveur Jellyfin.
 - Lecture sur l'adresse locale de Jellyfin quand la TV est sur le réseau de la maison.
 - Paramètres réduits à l'état des serveurs, la mise à jour, le thème et la personnalisation de l'accueil.
-- Recherche et fiches via TMDB (clé fournie par le serveur Lumio), affiches Better Posters, notes de la famille sur les affiches.
+- Recherche et fiches via TMDB (clé fournie par le serveur Lumio), affiches TMDB, notes de la famille sur les affiches.
 - Addons Nuvio / Stremio : seulement leurs catalogues (rangées de l'accueil) ; la lecture vient uniquement de Jellyfin.
 - Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison.
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.

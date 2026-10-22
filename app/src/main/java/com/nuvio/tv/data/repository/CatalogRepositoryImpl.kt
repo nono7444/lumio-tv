@@ -67,7 +67,7 @@ class CatalogRepositoryImpl @Inject constructor(
         if (ServerCatalog.isServerAddon(addonBaseUrl)) {
             val row = try {
                 serverCatalog.catalog(addonBaseUrl, addonId, addonName, catalogId, catalogName, type, skip, extraArgs).let { raw ->
-                    // Lumio : affiches personnalisées (Better Posters) aussi pour les rangées Jellyfin
+                    // Affiches personnalisées choisies dans les réglages (aucune par défaut en mode Lumio : affiches TMDB)
                     val pattern = com.nuvio.tv.core.poster.patternForScreen(
                         layoutPreferenceDataStore.customPosterUrlPattern.first(),
                         posterScreen,
