@@ -49,7 +49,6 @@ fun currentDecoSeason(today: LocalDate = LocalDate.now()): LumioDecoSeason {
     }
 }
 
-private data class Particle(val x: Float, val speed: Float, val size: Float, val phase: Float, val drift: Float, val glyph: String)
 
 @Composable
 fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
@@ -57,116 +56,61 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
     val season = remember { currentDecoSeason() }
     if (season == LumioDecoSeason.NONE) return
 
+    // Décor FIXE (aucune animation) : dessiné une seule fois, aucun coût pendant la navigation
     val glyphs = when (season) {
-        LumioDecoSeason.HALLOWEEN -> listOf("🦇", "🦇", "🎃", "👻", "🦇", "🍂")
-        LumioDecoSeason.CHRISTMAS -> emptyList() // neige dessinée
+        LumioDecoSeason.HALLOWEEN -> listOf("🦇", "🎃", "🦇", "👻", "🦇")
+        LumioDecoSeason.CHRISTMAS -> listOf("❄️", "⭐", "❄️", "🎁", "❄️")
         LumioDecoSeason.NEW_YEAR -> listOf("✨", "🎉", "✨", "🥂")
         LumioDecoSeason.VALENTINE -> listOf("❤️", "💕", "💖")
         LumioDecoSeason.EASTER -> listOf("🥚", "🐣", "🌷")
         LumioDecoSeason.NONE -> emptyList()
     }
-    val count = if (season == LumioDecoSeason.CHRISTMAS) 70 else 14
-    val particles = remember(season) {
-        val r = Random(season.ordinal * 97 + 7)
-        List(count) {
-            Particle(
-                x = r.nextFloat(),
-                speed = 0.35f + r.nextFloat() * 0.65f,
-                size = if (season == LumioDecoSeason.CHRISTMAS) 1.5f + r.nextFloat() * 3.5f else 16f + r.nextFloat() * 14f,
-                phase = r.nextFloat(),
-                drift = 0.01f + r.nextFloat() * 0.03f,
-                glyph = if (glyphs.isEmpty()) "" else glyphs[r.nextInt(glyphs.size)]
-            )
-        }
+    val glow = when (season) {
+        LumioDecoSeason.HALLOWEEN -> Color(0x33FF7A00)
+        LumioDecoSeason.CHRISTMAS -> Color(0x22C8102E)
+        LumioDecoSeason.NEW_YEAR -> Color(0x22FFD54F)
+        LumioDecoSeason.VALENTINE -> Color(0x22FF4F81)
+        LumioDecoSeason.EASTER -> Color(0x2266BB6A)
+        LumioDecoSeason.NONE -> Color.Transparent
     }
-    // Animations lues seulement au dessin (pas de recomposition à chaque image : fluide sur les petites box)
-    val tState = rememberInfiniteTransition(label = "lumioSeason").animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (season == LumioDecoSeason.CHRISTMAS) 14_000 else 22_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "lumioSeasonT"
-    )
-    val twinkleState = rememberInfiniteTransition(label = "lumioTwinkle").animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400), RepeatMode.Reverse),
-        label = "lumioTwinkleA"
-    )
-
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val w = constraints.maxWidth.toFloat()
-        val h = constraints.maxHeight.toFloat()
-
-        // Lueur de saison sur les bords
-        val glow = when (season) {
-            LumioDecoSeason.HALLOWEEN -> Color(0x33FF7A00)
-            LumioDecoSeason.CHRISTMAS -> Color(0x22C8102E)
-            LumioDecoSeason.NEW_YEAR -> Color(0x22FFD54F)
-            LumioDecoSeason.VALENTINE -> Color(0x22FF4F81)
-            LumioDecoSeason.EASTER -> Color(0x2266BB6A)
-            LumioDecoSeason.NONE -> Color.Transparent
-        }
+    Box(modifier = modifier.fillMaxSize()) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val t = tState.value
-            val twinkle = twinkleState.value
-            drawRect(Brush.verticalGradient(listOf(glow, Color.Transparent), endY = size.height * 0.28f))
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, glow), startY = size.height * 0.8f))
-
+            val w = size.width
+            drawRect(Brush.verticalGradient(listOf(glow, Color.Transparent), endY = size.height * 0.22f))
             when (season) {
-                LumioDecoSeason.CHRISTMAS -> {
-                    // Neige
-                    particles.forEach { p ->
-                        val y = ((p.phase + t * p.speed) % 1f) * (h + 20f) - 10f
-                        val x = (p.x + sin((t * 2 * PI * 2 + p.phase * 6).toFloat()) * p.drift) * w
-                        drawCircle(Color.White.copy(alpha = 0.55f), radius = p.size, center = Offset(x, y))
+                LumioDecoSeason.HALLOWEEN -> {
+                    // Toiles d'araignée dans les coins du haut
+                    val web = Color.White.copy(alpha = 0.16f)
+                    for (corner in listOf(Offset(0f, 0f), Offset(w, 0f))) {
+                        for (ring in 1..4) drawCircle(web, radius = ring * 24f, center = corner, style = Stroke(width = 1.2f))
+                        for (k in 0..5) {
+                            val a = (k / 5f) * (PI / 2).toFloat()
+                            val dx = if (corner.x == 0f) kotlin.math.cos(a) else -kotlin.math.cos(a)
+                            drawLine(web, corner, Offset(corner.x + dx * 100f, corner.y + sin(a) * 100f), strokeWidth = 1.2f)
+                        }
                     }
-                    // Guirlande lumineuse en haut
+                }
+                LumioDecoSeason.CHRISTMAS -> {
+                    // Guirlande lumineuse fixe en haut
                     val bulbs = 26
                     val colors = listOf(Color(0xFFFF3B30), Color(0xFF34C759), Color(0xFFFFCC00), Color(0xFF0A84FF))
                     for (i in 0 until bulbs) {
                         val x = w * (i + 0.5f) / bulbs
                         val y = 10f + 10f * sin((i / bulbs.toFloat()) * PI.toFloat() * 4)
-                        val on = (i + (t * 12).toInt()) % 2 == 0
-                        drawCircle(colors[i % colors.size].copy(alpha = if (on) 0.9f * twinkle else 0.35f), radius = 5f, center = Offset(x, y))
-                    }
-                }
-                LumioDecoSeason.HALLOWEEN -> {
-                    // Toiles d'araignée dans les coins du haut
-                    val web = Color.White.copy(alpha = 0.18f)
-                    for (corner in listOf(Offset(0f, 0f), Offset(w, 0f))) {
-                        for (ring in 1..4) {
-                            drawCircle(web, radius = ring * 26f, center = corner, style = Stroke(width = 1.2f))
-                        }
-                        for (k in 0..5) {
-                            val a = (k / 5f) * (PI / 2).toFloat()
-                            val dx = if (corner.x == 0f) kotlin.math.cos(a) else -kotlin.math.cos(a)
-                            drawLine(web, corner, Offset(corner.x + dx * 110f, corner.y + sin(a) * 110f), strokeWidth = 1.2f)
-                        }
+                        drawCircle(colors[i % colors.size].copy(alpha = 0.8f), radius = 5f, center = Offset(x, y))
                     }
                 }
                 else -> Unit
             }
         }
-
-        // Petits personnages (chauves-souris, citrouilles, cœurs…) qui traversent lentement le haut de l'écran
-        if (season != LumioDecoSeason.CHRISTMAS) {
-            particles.forEach { p ->
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            val progress = (p.phase + tState.value * p.speed) % 1f
-                            val x = progress * (w + 120f) - 60f
-                            val y = h * (0.04f + p.x * 0.22f) + sin((progress * 2 * PI * 3).toFloat()) * 18f
-                            androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt())
-                        }
-                        .alpha(0.55f)
-                ) {
-                    Text(p.glyph, fontSize = p.size.sp)
-                }
+        // Quelques petits motifs en haut de l'écran, à des places fixes
+        val spots = listOf(0.18f to 10.dp, 0.36f to 22.dp, 0.58f to 6.dp, 0.74f to 26.dp, 0.88f to 12.dp)
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            glyphs.forEachIndexed { i, g ->
+                val (fx, y) = spots[i % spots.size]
+                Text(g, fontSize = 18.sp, modifier = Modifier.offset(x = maxWidth * fx, y = y).alpha(0.5f))
             }
         }
-
-        // Clin d'œil dans le coin
         val corner = when (season) {
             LumioDecoSeason.HALLOWEEN -> "🎃"
             LumioDecoSeason.CHRISTMAS -> "🎄"
@@ -175,6 +119,6 @@ fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
             LumioDecoSeason.EASTER -> "🐰"
             LumioDecoSeason.NONE -> ""
         }
-        Text(corner, fontSize = 34.sp, modifier = Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-18).dp).alpha(0.8f))
+        Text(corner, fontSize = 30.sp, modifier = Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-18).dp).alpha(0.75f))
     }
 }

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 
@@ -56,6 +57,17 @@ object LumioRatingBadges {
         }
     }
 
+    /** Au démarrage de l'appli : chargement puis rafraîchissement toutes les 5 minutes. */
+    fun start(context: Context) {
+        val app = context.applicationContext
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+            while (true) {
+                refresh(app, force = true)
+                kotlinx.coroutines.delay(if (_summary.value.isEmpty()) 30_000 else 5 * 60_000L)
+            }
+        }
+    }
+
     fun forImdb(imdb: String?): LumioRatingSummary? = imdb?.takeIf { it.startsWith("tt") }?.let { _summary.value["imdb:$it"] }
 }
 
@@ -69,8 +81,6 @@ private fun verdict(n: Double): Pair<String, Color> = when {
 @Composable
 fun LumioRatingBadge(imdbId: String?, modifier: Modifier = Modifier) {
     if (!LumioMode.ENABLED || imdbId.isNullOrBlank()) return
-    val context = LocalContext.current
-    LaunchedEffect(Unit) { LumioRatingBadges.refresh(context.applicationContext) }
     val map by LumioRatingBadges.summary.collectAsState()
     val r = map["imdb:$imdbId"] ?: return
     val (label, color) = verdict(r.avg)

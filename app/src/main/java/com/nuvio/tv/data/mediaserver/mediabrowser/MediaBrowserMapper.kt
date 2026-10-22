@@ -18,6 +18,12 @@ import com.nuvio.tv.domain.model.Video
 import java.time.Instant
 import kotlin.math.roundToInt
 
+// Lumio : images à la taille d'un écran 1080p (les grandes images 4K ralentissaient les petites box TV)
+private const val POSTER_H = 540
+private const val BACKDROP_W = 1600
+private const val LOGO_W = 560
+private const val THUMB_W = 720
+
 internal class MediaBrowserMapper(
     private val baseUrl: String,
     private val connectionId: String
@@ -60,7 +66,7 @@ internal class MediaBrowserMapper(
             id = ref(seriesId),
             type = ContentType.SERIES,
             name = item.seriesName ?: item.name.orEmpty(),
-            poster = item.seriesPrimaryImageTag?.let { image(seriesId, "Primary", it, maxHeight = 1000) },
+            poster = item.seriesPrimaryImageTag?.let { image(seriesId, "Primary", it, maxHeight = POSTER_H) },
             posterShape = PosterShape.POSTER,
             background = item.backdropImage(),
             logo = item.logoImage(),
@@ -128,7 +134,7 @@ internal class MediaBrowserMapper(
         id = ref(item.id),
         title = item.name.orEmpty(),
         released = item.premiereDate,
-        thumbnail = item.imageTags["Primary"]?.let { image(item.id, "Primary", it, maxWidth = 1280) },
+        thumbnail = item.imageTags["Primary"]?.let { image(item.id, "Primary", it, maxWidth = THUMB_W) },
         season = item.parentIndexNumber,
         episode = item.indexNumber,
         overview = item.overview,
@@ -168,22 +174,23 @@ internal class MediaBrowserMapper(
                 "tag" to tag,
                 "maxWidth" to maxWidth?.toString(),
                 "maxHeight" to maxHeight?.toString(),
-                "quality" to "95"
+                // Lumio : JPEG un peu plus compressé (invisible à l'œil, beaucoup plus léger à charger)
+                "quality" to "85"
             )
         )
 
     private fun BaseItem.primaryImage(): String? =
-        imageTags["Primary"]?.let { image(id, "Primary", it, maxHeight = 1000) }
+        imageTags["Primary"]?.let { image(id, "Primary", it, maxHeight = POSTER_H) }
 
     private fun BaseItem.backdropImage(): String? =
-        backdropImageTags.firstOrNull()?.let { image(id, "Backdrop/0", it, maxWidth = 2560) }
+        backdropImageTags.firstOrNull()?.let { image(id, "Backdrop/0", it, maxWidth = BACKDROP_W) }
             ?: parentBackdropItemId?.let { parentId ->
-                parentBackdropImageTags.firstOrNull()?.let { image(parentId, "Backdrop/0", it, maxWidth = 2560) }
+                parentBackdropImageTags.firstOrNull()?.let { image(parentId, "Backdrop/0", it, maxWidth = BACKDROP_W) }
             }
 
     private fun BaseItem.logoImage(): String? =
-        imageTags["Logo"]?.let { image(id, "Logo", it, maxWidth = 1000) }
-            ?: parentLogoItemId?.let { parentId -> parentLogoImageTag?.let { image(parentId, "Logo", it, maxWidth = 1000) } }
+        imageTags["Logo"]?.let { image(id, "Logo", it, maxWidth = LOGO_W) }
+            ?: parentLogoItemId?.let { parentId -> parentLogoImageTag?.let { image(parentId, "Logo", it, maxWidth = LOGO_W) } }
 
     private fun BaseItem.releaseInfo(kind: ServerMediaKind): String? {
         val start = productionYear ?: return null

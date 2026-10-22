@@ -282,7 +282,7 @@ class LayoutPreferenceDataStore @Inject constructor(
     }
 
     val focusedPosterBackdropExpandEnabled: Flow<Boolean> = profileFlow { prefs ->
-        prefs[focusedPosterBackdropExpandEnabledKey] ?: true
+        prefs[focusedPosterBackdropExpandEnabledKey] ?: !com.nuvio.tv.lumio.LumioMode.ENABLED
     }
 
     val focusedPosterBackdropExpandDelaySeconds: Flow<Int> = profileFlow { prefs ->
