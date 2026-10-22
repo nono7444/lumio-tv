@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,6 +118,16 @@ fun LumioSettingsContent(
             ) {
                 // Mise à jour (depuis les Releases de nono7444/lumio-tv)
                 UpdateChannelSettings(initialFocusRequester)
+
+                // Affiches : TMDB par défaut, Better Posters au choix
+                val betterPosters by com.nuvio.tv.lumio.LumioPosterSource.betterPosters.collectAsState()
+                SettingsToggleRow(
+                    title = "Affiches Better Posters",
+                    subtitle = if (betterPosters) "Activé : affiches Better Posters (genre, note). Relance l'appli pour tout mettre à jour."
+                    else "Désactivé : affiches TMDB pour tous les titres. Relance l'appli pour tout mettre à jour.",
+                    checked = betterPosters,
+                    onToggle = { com.nuvio.tv.lumio.LumioPosterSource.setBetterPosters(context, !betterPosters) }
+                )
 
                 // Personnalisation de l'accueil : ordre des rangées, rangées masquées
                 SettingsActionRow(

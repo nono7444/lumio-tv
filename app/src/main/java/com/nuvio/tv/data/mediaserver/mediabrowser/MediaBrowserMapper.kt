@@ -32,12 +32,21 @@ internal class MediaBrowserMapper(
 
     fun preview(item: BaseItem): MetaPreview? {
         val kind = item.mediaKind() ?: return null
+        val ids = item.externalIds()
+        // Lumio : affiche TMDB (ou Better Posters selon le réglage), celle de Jellyfin en secours
+        val (poster, fallbackPoster) = com.nuvio.tv.lumio.LumioPosterSource.resolve(
+            isMovie = kind == ServerMediaKind.MOVIE,
+            tmdbId = ids.tmdb.takeIf { kind == ServerMediaKind.MOVIE || kind == ServerMediaKind.SERIES },
+            imdbId = ids.imdb,
+            jellyfinPoster = item.primaryImage()
+        )
         return MetaPreview(
             id = ref(item.id),
             type = kind.domainType(),
             rawType = kind.contentType,
             name = item.name.orEmpty(),
-            poster = item.primaryImage(),
+            poster = poster,
+            rawPosterUrl = fallbackPoster,
             posterShape = PosterShape.POSTER,
             background = item.backdropImage(),
             logo = item.logoImage(),
@@ -47,7 +56,7 @@ internal class MediaBrowserMapper(
             genres = item.genres,
             released = item.premiereDate?.take(10),
             // Lumio : identifiant IMDb pour les notes de la famille
-            imdbId = item.externalIds().imdb
+            imdbId = ids.imdb
         )
     }
 
