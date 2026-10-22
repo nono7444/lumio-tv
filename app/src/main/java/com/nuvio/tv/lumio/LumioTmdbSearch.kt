@@ -14,6 +14,45 @@ import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
 
+private data class SearchHit(
+    val id: Int,
+    val title: String?,
+    val name: String?,
+    val originalTitle: String?,
+    val originalName: String?,
+    val posterPath: String?,
+    val backdropPath: String?,
+    val overview: String?,
+    val releaseDate: String?,
+    val firstAirDate: String?,
+    val voteAverage: Double?,
+    val voteCount: Int?,
+    val popularity: Double?
+) {
+    companion object {
+        fun fromJson(o: org.json.JSONObject) = SearchHit(
+            id = o.optInt("id"),
+            title = o.optString("title").takeIf { it.isNotBlank() },
+            name = o.optString("name").takeIf { it.isNotBlank() },
+            originalTitle = o.optString("original_title").takeIf { it.isNotBlank() },
+            originalName = o.optString("original_name").takeIf { it.isNotBlank() },
+            posterPath = o.optString("poster_path").takeIf { it.startsWith("/") },
+            backdropPath = o.optString("backdrop_path").takeIf { it.startsWith("/") },
+            overview = o.optString("overview").takeIf { it.isNotBlank() },
+            releaseDate = o.optString("release_date").takeIf { it.isNotBlank() },
+            firstAirDate = o.optString("first_air_date").takeIf { it.isNotBlank() },
+            voteAverage = if (o.has("vote_average")) o.optDouble("vote_average") else null,
+            voteCount = if (o.has("vote_count")) o.optInt("vote_count") else null,
+            popularity = if (o.has("popularity")) o.optDouble("popularity") else null
+        )
+
+        fun fromDto(r: com.nuvio.tv.data.remote.api.TmdbDiscoverResult) = SearchHit(
+            r.id, r.title, r.name, r.originalTitle, r.originalName, r.posterPath, r.backdropPath,
+            r.overview, r.releaseDate, r.firstAirDate, r.voteAverage, r.voteCount, r.popularity
+        )
+    }
+}
+
 object LumioTmdbSearch {
     const val BASE_URL = "lumio-tmdb://search"
     const val ADDON_ID = "lumio.tmdb"
@@ -42,6 +81,7 @@ object LumioTmdbSearch {
 
     suspend fun catalog(
         api: TmdbApi,
+        client: LumioClient,
         addonName: String,
         catalogId: String,
         catalogName: String,
@@ -50,9 +90,15 @@ object LumioTmdbSearch {
     ): CatalogRow {
         val query = extraArgs["search"].orEmpty().trim()
         val isSeries = catalogId == SERIES_ID
-        val results = if (query.isBlank()) emptyList() else {
+        // Recherche faite par le serveur Lumio (sa clé TMDB) ; sinon directement avec la clé de la TV
+        val results: List<SearchHit> = if (query.isBlank()) emptyList() else runCatching {
+            val json = client.tmdbSearch(if (isSeries) "tv" else "movie", query)
+            val arr = json.optJSONArray("results")
+            (0 until (arr?.length() ?: 0)).mapNotNull { i -> arr!!.optJSONObject(i)?.let(SearchHit::fromJson) }
+        }.getOrElse {
+            if (!LumioTmdb.available) throw it
             val response = if (isSeries) api.searchTv(LumioTmdb.key, query, "fr-FR") else api.searchMovies(LumioTmdb.key, query, "fr-FR")
-            response.body()?.results.orEmpty()
+            response.body()?.results.orEmpty().map(SearchHit::fromDto)
         }
         val items = results
             .sortedByDescending { (it.popularity ?: 0.0) + (it.voteCount ?: 0) / 50.0 }

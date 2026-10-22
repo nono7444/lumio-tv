@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import org.json.JSONObject
 
@@ -20,7 +21,11 @@ object LumioTmdb {
     /** Clé TMDB (v3) ou jeton de lecture (v4), vide tant qu'elle n'est pas reçue du serveur. */
     val key: String get() = cached
 
-    val available: Boolean get() = cached.isNotBlank()
+    /** Sans clé sur la TV, les requêtes TMDB passent par le serveur Lumio (adresse + jeton Jellyfin). */
+    @Volatile
+    private var proxy: Pair<String, String>? = null
+
+    val available: Boolean get() = cached.isNotBlank() || proxy != null
 
     private fun prefs(context: Context) = context.getSharedPreferences("lumio", Context.MODE_PRIVATE)
 
@@ -31,6 +36,7 @@ object LumioTmdb {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             repeat(40) {
                 val ok = runCatching {
+                    LumioClient.get(app).proxyInfo()?.let { proxy = it }
                     val k = LumioClient.get(app).tmdbKey()
                     if (!k.isNullOrBlank()) {
                         cached = k
@@ -51,7 +57,19 @@ object LumioTmdb {
     val interceptor = Interceptor { chain ->
         val k = cached
         val req = chain.request()
-        if (k.isBlank()) return@Interceptor chain.proceed(req)
+        if (k.isBlank()) {
+            // Pas de clé sur la TV : la même requête passe par le serveur Lumio, qui a la clé
+            val p = proxy ?: return@Interceptor chain.proceed(req)
+            val path = req.url.encodedPath.removePrefix("/3/").removePrefix("/")
+            val target = (p.first.trimEnd('/') + "/api/tmdb/proxy/" + path).toHttpUrlOrNull()
+                ?: return@Interceptor chain.proceed(req)
+            val url = target.newBuilder()
+            for (i in 0 until req.url.querySize) {
+                val name = req.url.queryParameterName(i)
+                if (name != "api_key") url.addQueryParameter(name, req.url.queryParameterValue(i))
+            }
+            return@Interceptor chain.proceed(req.newBuilder().url(url.build()).header("X-Jellyfin-Token", p.second).build())
+        }
         val url = req.url.newBuilder().removeAllQueryParameters("api_key")
         val builder = req.newBuilder()
         if (k.length > 40) builder.header("Authorization", "Bearer $k")

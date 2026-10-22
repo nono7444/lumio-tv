@@ -53,7 +53,7 @@ class CatalogRepositoryImpl @Inject constructor(
         // Lumio : recherche TMDB (films / séries)
         if (com.nuvio.tv.lumio.LumioTmdbSearch.isTmdbSearch(addonBaseUrl)) {
             val row = try {
-                com.nuvio.tv.lumio.LumioTmdbSearch.catalog(tmdbApi, addonName, catalogId, catalogName, type, extraArgs)
+                com.nuvio.tv.lumio.LumioTmdbSearch.catalog(tmdbApi, com.nuvio.tv.lumio.LumioClient.get(context), addonName, catalogId, catalogName, type, extraArgs)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {

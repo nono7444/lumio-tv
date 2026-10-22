@@ -176,6 +176,15 @@ class LumioClient(private val context: Context) {
     /** Moyennes des notes de la famille (clés « movie:123 », « tv:123 » et « imdb:tt… »). */
     suspend fun ratingSummary(): JSONObject = JSONObject(call("GET", "/api/ratings/summary"))
 
+    /** Recherche TMDB faite par le serveur Lumio (la clé reste sur le serveur). */
+    suspend fun tmdbSearch(type: String, query: String): JSONObject =
+        JSONObject(call("GET", "/api/tmdb/search?type=$type&q=" + java.net.URLEncoder.encode(query, "UTF-8")))
+
+    /** Adresse du serveur Lumio + jeton Jellyfin, pour passer les requêtes TMDB par le serveur. */
+    suspend fun proxyInfo(): Pair<String, String>? = runCatching {
+        withContext(Dispatchers.IO) { jellyfin()?.let { s -> base(s) to s.token } }
+    }.getOrNull()
+
     /** Clé TMDB partagée par le serveur Lumio (null si l'admin ne l'a pas encore confiée au serveur). */
     suspend fun tmdbKey(): String? = parseTmdbKey(call("GET", "/api/config/tmdb"))
 
