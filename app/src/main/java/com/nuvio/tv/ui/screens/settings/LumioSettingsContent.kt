@@ -60,7 +60,11 @@ private fun JSONObject.service(key: String, name: String): ServiceRow? {
 }
 
 @Composable
-fun LumioSettingsContent(initialFocusRequester: FocusRequester? = null, onNavigateToCatalogOrder: () -> Unit = {}) {
+fun LumioSettingsContent(
+    initialFocusRequester: FocusRequester? = null,
+    onNavigateToCatalogOrder: () -> Unit = {},
+    onNavigateToAddons: () -> Unit = {}
+) {
     val context = LocalContext.current
     val client = remember { LumioClient.get(context) }
     var rows by remember { mutableStateOf<List<ServiceRow>>(emptyList()) }
@@ -119,6 +123,13 @@ fun LumioSettingsContent(initialFocusRequester: FocusRequester? = null, onNaviga
                     title = "Personnaliser l'accueil",
                     subtitle = "Choisir les rangées affichées et leur ordre",
                     onClick = onNavigateToCatalogOrder
+                )
+
+                // Addons Nuvio / Stremio : leurs catalogues deviennent des rangées de l'accueil (pas de lecture via les addons)
+                SettingsActionRow(
+                    title = "Addons",
+                    subtitle = "Ajouter des addons Nuvio / Stremio : leurs catalogues apparaissent sur l'accueil",
+                    onClick = onNavigateToAddons
                 )
 
                 Text(

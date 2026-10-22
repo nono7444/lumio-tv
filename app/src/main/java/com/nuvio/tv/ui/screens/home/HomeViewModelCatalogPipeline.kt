@@ -132,7 +132,7 @@ internal fun HomeViewModel.observeInstalledAddonsPipeline() {
         combine(addonRepository.getInstalledAddons(), serverCatalog.addons) { installed, servers ->
             // Lumio : l'accueil n'affiche que Jellyfin ; les addons gardent leurs fiches mais pas leurs catalogues
             if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
-                installed.enabledAddons().map { it.copy(catalogs = emptyList()) } + com.nuvio.tv.lumio.LumioMode.withoutCollections(servers)
+                com.nuvio.tv.lumio.LumioMode.catalogAddons(installed.enabledAddons()) + com.nuvio.tv.lumio.LumioMode.withoutCollections(servers)
             } else {
                 installed.enabledAddons() + servers
             }

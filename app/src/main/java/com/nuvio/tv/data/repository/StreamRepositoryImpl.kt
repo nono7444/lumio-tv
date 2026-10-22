@@ -167,11 +167,13 @@ class StreamRepositoryImpl @Inject constructor(
 
             if (profileManager.activeProfileId.value != profileId) continue
 
+            // Lumio : la lecture vient uniquement de Jellyfin — les addons ne servent qu'à leurs catalogues
+            val lumio = com.nuvio.tv.lumio.LumioMode.ENABLED
             return StreamSourceConfigurationSnapshot(
                 profileId = profileId,
-                addons = addons,
-                pluginsEnabled = pluginsEnabled,
-                enabledScrapers = enabledScrapers,
+                addons = if (lumio) emptyList() else addons,
+                pluginsEnabled = pluginsEnabled && !lumio,
+                enabledScrapers = if (lumio) emptyList() else enabledScrapers,
                 groupPluginsByRepository = groupPluginsByRepository,
                 pluginRepositories = pluginRepositories,
                 debridSettings = debridSettings
@@ -631,6 +633,7 @@ class StreamRepositoryImpl @Inject constructor(
         type: String,
         videoId: String
     ): NetworkResult<List<Stream>> {
+        if (com.nuvio.tv.lumio.LumioMode.ENABLED) return NetworkResult.Success(emptyList())
         val cleanBaseUrl = addon.baseUrl.trimEnd('/')
         val queryStart = cleanBaseUrl.indexOf('?')
         val basePath = if (queryStart >= 0) cleanBaseUrl.substring(0, queryStart).trimEnd('/') else cleanBaseUrl

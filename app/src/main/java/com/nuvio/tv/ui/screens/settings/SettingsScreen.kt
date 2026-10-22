@@ -820,7 +820,8 @@ private fun SettingsDetailPane(
     when (selectedCategory) {
         SettingsCategory.LUMIO -> LumioSettingsContent(
             initialFocusRequester = if (allowDetailAutofocus) contentFocusRequesters[SettingsCategory.LUMIO] else null,
-            onNavigateToCatalogOrder = onNavigateToCatalogOrder
+            onNavigateToCatalogOrder = onNavigateToCatalogOrder,
+            onNavigateToAddons = onNavigateToAddons
         )
         SettingsCategory.EXPERIENCE -> EssentialAdvancedSettingsContent(
             experienceModeViewModel = experienceModeViewModel,

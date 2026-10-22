@@ -9,6 +9,12 @@ package com.nuvio.tv.lumio
 object LumioMode {
     const val ENABLED = true
 
+    /** Addons : seulement leurs catalogues, sauf Cinemeta (installé par défaut, sert aux fiches). */
+    fun catalogAddons(installed: List<com.nuvio.tv.domain.model.Addon>): List<com.nuvio.tv.domain.model.Addon> =
+        installed.map { addon ->
+            if (addon.baseUrl.contains("cinemeta.strem.io", ignoreCase = true)) addon.copy(catalogs = emptyList()) else addon
+        }
+
     /** Sans la bibliothèque « Collections » de Jellyfin : Lumio a ses propres sagas (Bibliothèque → Sagas). */
     fun withoutCollections(addons: List<com.nuvio.tv.domain.model.Addon>): List<com.nuvio.tv.domain.model.Addon> =
         addons.map { addon ->
