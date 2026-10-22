@@ -258,6 +258,8 @@ fun HomeScreen(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        // Lumio : fond de l'accueil choisi (Halloween, Noël…) derrière les rangées
+        com.nuvio.tv.lumio.LumioHomeBackdrop()
         when {
             !uiState.layoutPreferencesReady -> {
                 Unit

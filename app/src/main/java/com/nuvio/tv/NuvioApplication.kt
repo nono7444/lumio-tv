@@ -92,6 +92,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         com.nuvio.tv.lumio.LumioTmdb.start(this)
         com.nuvio.tv.lumio.LumioRatingBadges.start(this)
         com.nuvio.tv.lumio.LumioPosterSource.start(this)
+        com.nuvio.tv.lumio.LumioHomeBackground.start(this)
         // Load locale synchronously so it's available before Activity.attachBaseContext.
         // SharedPreferences reads are fast (cached in memory after first access).
         val tag = getSharedPreferences("app_locale", Context.MODE_PRIVATE)

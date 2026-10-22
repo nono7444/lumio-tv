@@ -129,6 +129,15 @@ fun LumioSettingsContent(
                     onToggle = { com.nuvio.tv.lumio.LumioPosterSource.setBetterPosters(context, !betterPosters) }
                 )
 
+                // Fond de l'accueil : aucun, selon la saison, Halloween, Noël (appuyer pour changer)
+                val homeBg by com.nuvio.tv.lumio.LumioHomeBackground.choice.collectAsState()
+                SettingsActionRow(
+                    title = "Fond de l'accueil",
+                    subtitle = "Appuie pour changer : Aucun, Selon la saison, Halloween, Noël",
+                    value = homeBg.label,
+                    onClick = { com.nuvio.tv.lumio.LumioHomeBackground.next(context) }
+                )
+
                 // Personnalisation de l'accueil : ordre des rangées, rangées masquées
                 SettingsActionRow(
                     title = "Personnaliser l'accueil",
