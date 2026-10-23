@@ -454,7 +454,9 @@ open class MainActivity : ComponentActivity() {
                     serverRepository.enabledConnections().any { it.providerId == "jellyfin" }
                 }.getOrDefault(true)
             }
-            val startupSplashEnabled by profileManager.startupSplashEnabled.collectAsState()
+            val nuvioStartupSplashEnabled by profileManager.startupSplashEnabled.collectAsState()
+            // Lumio : pas d'écran de démarrage (fond coloré + nom), l'appli s'ouvre directement
+            val startupSplashEnabled = nuvioStartupSplashEnabled && !com.nuvio.tv.lumio.LumioMode.ENABLED
             val startupLoadingState = remember(activeProfileId, startupSession) { StartupLoadingState() }
             val profiles by profileManager.profiles.collectAsState()
             val hasEverSelectedProfile by profileManager.hasEverSelectedProfile.collectAsState()
