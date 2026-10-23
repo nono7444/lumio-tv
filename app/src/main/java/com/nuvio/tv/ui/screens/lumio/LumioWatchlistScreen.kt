@@ -45,13 +45,11 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.nuvio.tv.lumio.LumioWatchItem
 import com.nuvio.tv.lumio.LumioWatchlist
-import com.nuvio.tv.lumio.MediaStatus
 import com.nuvio.tv.ui.theme.NuvioTheme
 import kotlinx.coroutines.launch
 
-private val FILTERS = listOf("all" to "Tout", "available" to "Disponibles", "missing" to "Pas encore là", "movie" to "Films", "tv" to "Séries")
-
-private fun LumioWatchItem.isThere() = status == MediaStatus.AVAILABLE || status == MediaStatus.PARTIALLY_AVAILABLE
+// Simple liste de rappel : on ouvre la fiche pour regarder ou demander le titre
+private val FILTERS = listOf("all" to "Tout", "movie" to "Films", "tv" to "Séries")
 
 @Composable
 fun LumioWatchlistScreen(
@@ -70,8 +68,6 @@ fun LumioWatchlistScreen(
 
     val list = (items ?: emptyList()).filter {
         when (filter) {
-            "available" -> it.isThere()
-            "missing" -> !it.isThere()
             "movie", "tv" -> it.type == filter
             else -> true
         }
@@ -130,13 +126,6 @@ fun LumioWatchlistScreen(
                             }
                         }
                         Text(item.title, color = NuvioTheme.colors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
-                        val (label, color) = when {
-                            item.isThere() -> "● Disponible" to Color(0xFF30D158)
-                            item.status == MediaStatus.PROCESSING -> "● En cours" to Color(0xFF3D8BFF)
-                            item.status == MediaStatus.PENDING -> "● Demandé" to Color(0xFFFF9F0A)
-                            else -> "○ Pas encore là" to Color(0xFF9AA3B2)
-                        }
-                        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
