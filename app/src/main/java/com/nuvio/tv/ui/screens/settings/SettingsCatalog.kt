@@ -31,7 +31,9 @@ internal fun visibleSettingsCategories(
 ): List<SettingsCategory> = SettingsCategory.entries.filter { category ->
     // Lumio : paramètres épurés — état des serveurs + mise à jour, thème et personnalisation de l'accueil
     if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
-        return@filter category == SettingsCategory.LUMIO || category == SettingsCategory.APPEARANCE || category == SettingsCategory.LAYOUT
+        // + Profils (famille : un profil par personne, chacun avec son compte Jellyfin), géré depuis le profil principal
+        return@filter category == SettingsCategory.LUMIO || category == SettingsCategory.APPEARANCE || category == SettingsCategory.LAYOUT ||
+            (category == SettingsCategory.PROFILES && isPrimaryProfile)
     }
     when (category) {
         SettingsCategory.LUMIO -> false

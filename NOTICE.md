@@ -16,7 +16,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Paramètres réduits à l'état des serveurs, la mise à jour, le thème et la personnalisation de l'accueil.
 - Recherche et fiches via TMDB (clé fournie par le serveur Lumio), affiches TMDB (ou Better Posters au choix dans Paramètres → Lumio), notes de la famille sur les affiches.
 - Addons Nuvio / Stremio : seulement leurs catalogues (rangées de l'accueil) ; la lecture vient uniquement de Jellyfin.
-- Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison, fond de l'accueil (Halloween, Noël).
+- Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison, fond de l'accueil (Halloween, Noël), profils de la famille (un compte Jellyfin chacun), passer l'intro via les segments Jellyfin, état des disques.
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

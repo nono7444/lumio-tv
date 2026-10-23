@@ -188,6 +188,29 @@ class LumioClient(private val context: Context) {
     /** Clé TMDB partagée par le serveur Lumio (null si l'admin ne l'a pas encore confiée au serveur). */
     suspend fun tmdbKey(): String? = parseTmdbKey(call("GET", "/api/config/tmdb"))
 
+    /**
+     * Segments d'un titre Jellyfin (intro, récap, générique…) détectés par l'extension « Intro Skipper » :
+     * (type, début en s, fin en s). Liste vide si Jellyfin n'en a pas.
+     */
+    suspend fun mediaSegments(itemId: String): List<Triple<String, Double, Double>> = withContext(Dispatchers.IO) {
+        val s = jellyfin() ?: return@withContext emptyList()
+        runCatching {
+            val base = s.connection.address.trimEnd('/')
+            val conn = URL("$base/MediaSegments/${java.net.URLEncoder.encode(itemId, "UTF-8")}").openConnection() as HttpURLConnection
+            conn.connectTimeout = 6000
+            conn.readTimeout = 8000
+            conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("X-Emby-Token", s.token)
+            if (conn.responseCode !in 200..299) return@runCatching emptyList()
+            val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            json.optJSONArray("Items").objects().mapNotNull { o ->
+                val start = o.optLong("StartTicks", -1) / 10_000_000.0
+                val end = o.optLong("EndTicks", -1) / 10_000_000.0
+                if (start < 0 || end <= start) null else Triple(o.optString("Type"), start, end)
+            }
+        }.getOrDefault(emptyList())
+    }
+
     /** Adresse du serveur Lumio trouvée (pour l'afficher). */
     suspend fun serverAddress(): String? = runCatching { withContext(Dispatchers.IO) { jellyfin()?.let { base(it) } } }.getOrNull()
 

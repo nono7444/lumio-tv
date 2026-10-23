@@ -1,5 +1,6 @@
 package com.nuvio.tv.ui.screens.player
 
+import com.nuvio.tv.data.repository.SkipInterval
 import android.util.Log
 import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.C
@@ -614,6 +615,30 @@ internal fun PlayerRuntimeController.fetchSkipIntervals(id: String?, season: Int
 
     // Prefer videoId over contentId — videoId carries the season/episode-specific ID
     val effectiveId = currentVideoId?.takeIf { it.isNotBlank() } ?: id
+
+    // Lumio : titre de Jellyfin → segments détectés par Jellyfin (extension « Intro Skipper ») : intro, récap, générique
+    val serverRef = com.nuvio.tv.data.mediaserver.ServerItemRef.parse(effectiveId)
+        ?: com.nuvio.tv.data.mediaserver.ServerItemRef.parse(id)
+    if (serverRef != null) {
+        val key = "jellyfin:${serverRef.itemId}"
+        if (skipIntroFetchedKey == key) return
+        skipIntroFetchedKey = key
+        val isMovie = contentType.equals("movie", ignoreCase = true)
+        scope.launch {
+            skipIntervals = withTimeoutOrNull(10_000L) {
+                com.nuvio.tv.lumio.LumioClient.get(context).mediaSegments(serverRef.itemId).mapNotNull { (type, start, end) ->
+                    val t = when (type.lowercase()) {
+                        "intro" -> "intro"
+                        "recap" -> "recap"
+                        "outro" -> if (isMovie) "movie-credits" else "outro"
+                        else -> null
+                    } ?: return@mapNotNull null
+                    SkipInterval(startTime = start, endTime = end, type = t, provider = "jellyfin")
+                }
+            } ?: emptyList()
+        }
+        return
+    }
 
     if (contentType.equals("movie", ignoreCase = true)) {
         val key = "movie:$id:$effectiveId"

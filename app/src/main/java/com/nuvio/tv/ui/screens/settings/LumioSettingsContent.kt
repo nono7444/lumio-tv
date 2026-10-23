@@ -72,6 +72,7 @@ fun LumioSettingsContent(
     var address by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var machine by remember { mutableStateOf<String?>(null) }
+    var disks by remember { mutableStateOf<List<Triple<String, Long, Long>>>(emptyList()) }
 
     // Rafraîchi toutes les 15 s tant que la rubrique est affichée
     LaunchedEffect(Unit) {
@@ -86,6 +87,12 @@ fun LumioSettingsContent(
                         s.service("radarr", "Radarr (films)"),
                         s.service("sonarr", "Sonarr (séries)")
                     )
+                    // Disques : place libre / totale (serveur Lumio 3.29+)
+                    disks = s.optJSONArray("disks")?.let { arr ->
+                        (0 until arr.length()).mapNotNull { i ->
+                            arr.optJSONObject(i)?.let { d -> Triple(d.optString("label"), d.optLong("free"), d.optLong("total")) }
+                        }
+                    }.orEmpty()
                     machine = s.optJSONObject("machine")?.let { m ->
                         listOfNotNull(
                             if (m.isNull("cpu")) null else "processeur ${m.optInt("cpu")} %",
@@ -164,6 +171,16 @@ fun LumioSettingsContent(
                 }
                 rows.forEach { row -> ServiceStatusRow(row) }
                 machine?.let { Text("Machine : $it", color = NuvioTheme.colors.TextSecondary, style = MaterialTheme.typography.labelMedium) }
+                if (disks.isNotEmpty()) {
+                    Text(
+                        "Disques",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = NuvioTheme.colors.TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    disks.forEach { (label, free, total) -> DiskRow(label, free, total) }
+                }
                 address?.let { Text("Adresse : $it", color = NuvioTheme.colors.TextTertiary, style = MaterialTheme.typography.labelSmall) }
                 Text(
                     "Lumio TV ${BuildConfig.VERSION_NAME}",
@@ -219,6 +236,33 @@ private fun ServiceStatusRow(row: ServiceRow) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DiskRow(label: String, free: Long, total: Long) {
+    if (total <= 0) return
+    val used = (1f - free.toFloat() / total).coerceIn(0f, 1f)
+    val color = when {
+        used > 0.9f -> Red
+        used > 0.8f -> Orange
+        else -> Green
+    }
+    fun go(b: Long) = if (b >= 1_000_000_000_000L) String.format(java.util.Locale.FRANCE, "%.1f To", b / 1e12) else "${b / 1_000_000_000L} Go"
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x14FFFFFF), RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, color = NuvioTheme.colors.TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text("${go(free)} libres sur ${go(total)}", color = NuvioTheme.colors.TextSecondary, style = MaterialTheme.typography.labelMedium)
+        }
+        Box(modifier = Modifier.fillMaxWidth().height(8.dp).background(Color(0x22FFFFFF), RoundedCornerShape(4.dp))) {
+            Box(modifier = Modifier.fillMaxWidth(used).height(8.dp).background(color, RoundedCornerShape(4.dp)))
         }
     }
 }

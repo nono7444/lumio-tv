@@ -446,6 +446,14 @@ open class MainActivity : ComponentActivity() {
             }
 
             val activeProfileId by profileManager.activeProfileId.collectAsState()
+            // Lumio : chaque profil a son propre compte Jellyfin (progression, favoris, notes).
+            // Profil choisi sans compte relié → écran de connexion (QR code à scanner avec son téléphone).
+            LaunchedEffect(activeProfileId) {
+                lumioConfigured = runCatching {
+                    serverRepository.selectProfile(activeProfileId)
+                    serverRepository.enabledConnections().any { it.providerId == "jellyfin" }
+                }.getOrDefault(true)
+            }
             val startupSplashEnabled by profileManager.startupSplashEnabled.collectAsState()
             val startupLoadingState = remember(activeProfileId, startupSession) { StartupLoadingState() }
             val profiles by profileManager.profiles.collectAsState()
