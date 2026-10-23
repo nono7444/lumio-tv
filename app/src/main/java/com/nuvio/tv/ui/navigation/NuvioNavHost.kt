@@ -1182,6 +1182,21 @@ private fun PlaybackNavHost(
             )
         }
 
+        composable(Screen.LumioWatchlist.route) {
+            com.nuvio.tv.ui.screens.lumio.LumioWatchlistScreen(
+                showBuiltInHeader = !hideBuiltInHeaders,
+                onOpen = { item ->
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            "tmdb:${item.tmdbId}",
+                            if (item.type == "tv") "series" else "movie",
+                            com.nuvio.tv.lumio.LumioTmdbSearch.BASE_URL
+                        )
+                    )
+                }
+            )
+        }
+
         composable(Screen.LumioRequests.route) {
             com.nuvio.tv.ui.screens.lumio.LumioRequestsScreen(showBuiltInHeader = !hideBuiltInHeaders)
         }

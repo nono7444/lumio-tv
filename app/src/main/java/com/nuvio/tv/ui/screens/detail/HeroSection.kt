@@ -28,6 +28,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,6 +74,8 @@ import com.nuvio.tv.ui.components.SynopsisDescription
 import com.nuvio.tv.ui.theme.NuvioTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Visibility
@@ -373,6 +377,47 @@ fun HeroContentSection(
 
                         // Lumio : demande façon Seerr via le serveur Lumio
                         LumioRequestButton(state = lumio, onFocused = onHeroActionFocused)
+
+                        // Lumio : ajouter / retirer de la liste « À voir » (la même que sur le téléphone)
+                        val wlTmdb = lumio.media?.tmdbId
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && wlTmdb != null) {
+                            val wlContext = androidx.compose.ui.platform.LocalContext.current
+                            val wlScope = androidx.compose.runtime.rememberCoroutineScope()
+                            val wlItems by com.nuvio.tv.lumio.LumioWatchlist.items.collectAsState()
+                            LaunchedEffect(Unit) {
+                                if (com.nuvio.tv.lumio.LumioWatchlist.items.value == null) {
+                                    runCatching { com.nuvio.tv.lumio.LumioWatchlist.load(wlContext) }
+                                }
+                            }
+                            val inList = wlItems?.any { it.type == lumio.type && it.tmdbId == wlTmdb } == true
+                            ActionIconButton(
+                                icon = if (inList) androidx.compose.material.icons.Icons.Default.Bookmark else androidx.compose.material.icons.Icons.Default.BookmarkBorder,
+                                contentDescription = if (inList) "Retirer de « À voir »" else "Ajouter à « À voir »",
+                                onClick = {
+                                    wlScope.launch {
+                                        runCatching {
+                                            if (inList) com.nuvio.tv.lumio.LumioWatchlist.remove(wlContext, lumio.type, wlTmdb)
+                                            else com.nuvio.tv.lumio.LumioWatchlist.add(
+                                                wlContext,
+                                                com.nuvio.tv.lumio.LumioWatchItem(
+                                                    type = lumio.type,
+                                                    tmdbId = wlTmdb,
+                                                    title = meta.name,
+                                                    year = meta.releaseInfo?.take(4),
+                                                    poster = meta.poster?.takeIf { it.startsWith("https://") },
+                                                    backdrop = meta.background?.takeIf { it.startsWith("https://") },
+                                                    status = lumio.media?.status ?: com.nuvio.tv.lumio.MediaStatus.UNKNOWN
+                                                )
+                                            )
+                                        }
+                                    }
+                                },
+                                selected = inList,
+                                selectedContainerColor = Color.White,
+                                selectedContentColor = Color.Black,
+                                onFocused = onHeroActionFocused
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.lg))

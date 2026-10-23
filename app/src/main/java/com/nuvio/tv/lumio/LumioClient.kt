@@ -75,6 +75,16 @@ data class LumioListedRequest(
     val reason: String?
 )
 data class LumioFolder(val path: String, val freeSpace: Long?)
+/** Un titre de la liste « À voir ». */
+data class LumioWatchItem(
+    val type: String,
+    val tmdbId: Int,
+    val title: String,
+    val year: String?,
+    val poster: String?,
+    val backdrop: String?,
+    val status: Int
+)
 data class LumioMe(val admin: Boolean, val autoApprove: Boolean, val quotaRemaining: Int?, val quotaLimit: Int, val quotaDays: Int)
 
 data class LumioVote(val name: String, val stars: Int, val comment: String?, val mine: Boolean)
@@ -175,6 +185,35 @@ class LumioClient(private val context: Context) {
 
     /** Moyennes des notes de la famille (clés « movie:123 », « tv:123 » et « imdb:tt… »). */
     suspend fun ratingSummary(): JSONObject = JSONObject(call("GET", "/api/ratings/summary"))
+
+    /** Liste « À voir » de l'utilisateur (la même que sur son téléphone). */
+    suspend fun watchlist(): List<LumioWatchItem> {
+        val arr = JSONObject(call("GET", "/api/watchlist")).optJSONArray("items")
+        return arr.objects().map { o ->
+            LumioWatchItem(
+                type = o.optString("type", "movie"),
+                tmdbId = o.optInt("tmdbId"),
+                title = o.optString("title"),
+                year = o.optString("year").takeIf { it.isNotBlank() && it != "null" },
+                poster = o.optString("poster").takeIf { it.startsWith("http") },
+                backdrop = o.optString("backdrop").takeIf { it.startsWith("http") },
+                status = o.optInt("status", MediaStatus.UNKNOWN)
+            )
+        }
+    }
+
+    suspend fun watchlistAdd(type: String, tmdbId: Int, title: String, year: String?, poster: String?, backdrop: String?) {
+        call("POST", "/api/watchlist", JSONObject().apply {
+            put("type", type); put("tmdbId", tmdbId); put("title", title)
+            year?.let { put("year", it) }
+            poster?.takeIf { it.startsWith("https://") }?.let { put("poster", it) }
+            backdrop?.takeIf { it.startsWith("https://") }?.let { put("backdrop", it) }
+        })
+    }
+
+    suspend fun watchlistRemove(type: String, tmdbId: Int) {
+        call("DELETE", "/api/watchlist?type=$type&tmdbId=$tmdbId")
+    }
 
     /** Recherche TMDB faite par le serveur Lumio (la clé reste sur le serveur). */
     suspend fun tmdbSearch(type: String, query: String): JSONObject =
