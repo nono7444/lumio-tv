@@ -57,6 +57,9 @@ interface ServerProvider {
 
     suspend fun resumeItems(session: ServerSession, limit: Int): List<ServerTitle> = unsupported()
 
+    /** Lumio : sélection de saison (ex. Halloween) : titres de ces genres ou trouvés par ces mots, du plus récent au plus ancien. */
+    suspend fun seasonalItems(session: ServerSession, genres: List<String>, searches: List<String>, limit: Int): List<ServerTitle> = unsupported()
+
     suspend fun setPlayed(session: ServerSession, itemId: String, played: Boolean): Unit = unsupported()
 
     suspend fun externalIdIndex(

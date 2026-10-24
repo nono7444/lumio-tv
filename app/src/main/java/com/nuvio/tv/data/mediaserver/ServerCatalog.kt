@@ -54,7 +54,7 @@ class ServerCatalog @Inject constructor(
         addons.map { addon ->
             addon.copy(
                 catalogs = addon.catalogs.filter {
-                    it.id != RESUME_ID &&
+                    it.id != RESUME_ID && it.id != SEASON_ID &&
                         it.apiType != ServerMediaKind.COLLECTION.contentType &&
                         it.apiType != ServerMediaKind.MIXED.contentType
                 }
@@ -88,6 +88,7 @@ class ServerCatalog @Inject constructor(
         val query = extraArgs["search"]?.trim()?.takeIf { it.isNotEmpty() }
         val page = when {
             catalogId == RESUME_ID -> resumePage(connection, skip)
+            catalogId == SEASON_ID -> seasonPage(connection, skip)
             catalogId.startsWith(COLLECTION_PREFIX) -> pageOf(connection, skip) {
                 repository.call(connection.id) { provider, session ->
                     provider.collectionPage(session, catalogId.removePrefix(COLLECTION_PREFIX), skip, PAGE_SIZE)
@@ -166,19 +167,31 @@ class ServerCatalog @Inject constructor(
         val provider = repository.provider(connection) ?: return null
         val libraries = connection.selectedLibraries
         if (libraries.isEmpty()) return null
+        // Lumio : pas de rangée « Jellyfin · Reprendre » (la rangée « Reprendre » de l'appli suffit)
         val resume = CatalogDescriptor(
             type = ContentType.MOVIE,
             id = RESUME_ID,
             name = "${connection.name} · ${context.getString(R.string.servers_resume_row)}",
             showInHome = true,
             hasExplicitShowInHome = true
-        ).takeIf { provider.supports(ServerCapability.USER_STATE_READ) }
+        ).takeIf { provider.supports(ServerCapability.USER_STATE_READ) && !com.nuvio.tv.lumio.LumioMode.ENABLED }
+        // Lumio : rangée de saison (Halloween, Noël) avec les titres du serveur
+        val seasonal = com.nuvio.tv.lumio.LumioSeasonRow.current()?.let { sr ->
+            CatalogDescriptor(
+                type = ContentType.MOVIE,
+                id = SEASON_ID,
+                name = sr.title,
+                showInHome = true,
+                hasExplicitShowInHome = true
+            )
+        }.takeIf { com.nuvio.tv.lumio.LumioMode.ENABLED }
         val catalogs = libraries.map { library ->
             CatalogDescriptor(
                 type = library.kind.domainType(),
                 rawType = library.kind.contentType,
                 id = library.id,
-                name = "${connection.name} · ${library.name}",
+                // Lumio : « Nouveautés · Films » (du plus récent au plus ancien)
+                name = if (com.nuvio.tv.lumio.LumioMode.ENABLED && library.kind != ServerMediaKind.COLLECTION) "Nouveautés · ${library.name}" else "${connection.name} · ${library.name}",
                 extra = listOf(CatalogExtra(name = "skip")),
                 showInHome = true,
                 hasExplicitShowInHome = true
@@ -204,7 +217,7 @@ class ServerCatalog @Inject constructor(
             description = null,
             logo = null,
             baseUrl = baseUrl(connection.id),
-            catalogs = listOfNotNull(resume) + catalogs + searches,
+            catalogs = listOfNotNull(resume, seasonal) + catalogs + searches,
             types = listOf(ContentType.MOVIE, ContentType.SERIES),
             resources = listOf(AddonResource(name = "catalog", types = emptyList(), idPrefixes = null))
         )
@@ -214,6 +227,15 @@ class ServerCatalog @Inject constructor(
         if (skip > 0) return Page(emptyList(), null)
         val presenter = presenter(connection)
         val items = repository.call(connection.id) { provider, session -> provider.resumeItems(session, PAGE_SIZE) }
+            .map(presenter)
+        return Page(items, null)
+    }
+
+    private suspend fun seasonPage(connection: ServerConnection, skip: Int): Page {
+        val sr = com.nuvio.tv.lumio.LumioSeasonRow.current()
+        if (skip > 0 || sr == null) return Page(emptyList(), null)
+        val presenter = presenter(connection)
+        val items = repository.call(connection.id) { provider, session -> provider.seasonalItems(session, sr.genres, sr.searches, 60) }
             .map(presenter)
         return Page(items, null)
     }
@@ -257,6 +279,7 @@ class ServerCatalog @Inject constructor(
         private const val SEARCH_LIMIT = 30
         private const val DETAILS_BUFFER = 16
         private const val RESUME_ID = "resume"
+        private const val SEASON_ID = "lumio-season"
         private const val COLLECTION_PREFIX = "collection:"
         private const val SEARCH_PREFIX = "search."
         private val SEARCH_KINDS = listOf(ServerMediaKind.MOVIE, ServerMediaKind.SERIES)

@@ -225,6 +225,37 @@ internal abstract class MediaBrowserProvider(
         return ServerPage(result.items.mapNotNull(mapper(session)::title), result.totalRecordCount)
     }
 
+    override suspend fun seasonalItems(session: ServerSession, genres: List<String>, searches: List<String>, limit: Int): List<ServerTitle> {
+        val base = mapOf(
+            "recursive" to "true",
+            "includeItemTypes" to "Movie,Series",
+            "limit" to limit.toString(),
+            "fields" to LIST_FIELDS,
+            "imageTypeLimit" to "1",
+            "enableImageTypes" to "Primary,Backdrop,Logo"
+        )
+        val items = coroutineScope {
+            val byGenre = async {
+                if (genres.isEmpty()) emptyList()
+                else get(
+                    session,
+                    itemsEndpoint(session.userId),
+                    ItemsResult.serializer(),
+                    base + mapOf("genres" to genres.joinToString("|"), "sortBy" to "PremiereDate,ProductionYear,SortName", "sortOrder" to "Descending")
+                ).items
+            }
+            val bySearch = searches.map { q ->
+                async { runCatching { get(session, itemsEndpoint(session.userId), ItemsResult.serializer(), base + mapOf("searchTerm" to q)).items }.getOrDefault(emptyList()) }
+            }
+            byGenre.await() + bySearch.awaitAll().flatten()
+        }
+        return items
+            .distinctBy { it.id }
+            .sortedByDescending { it.premiereDate ?: it.productionYear?.toString() ?: "" }
+            .mapNotNull(mapper(session)::title)
+            .take(limit)
+    }
+
     override suspend fun search(
         session: ServerSession,
         kind: ServerMediaKind,
