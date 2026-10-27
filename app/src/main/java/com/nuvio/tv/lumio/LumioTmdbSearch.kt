@@ -3,6 +3,8 @@ package com.nuvio.tv.lumio
 // Lumio : recherche TMDB (films et séries) à la place de Cinemeta. Présentée comme un « addon » interne
 // pour réutiliser l'écran de recherche de Nuvio ; les résultats ouvrent la fiche TMDB (id « tmdb:123 »),
 // d'où l'on peut lire (si le titre est sur Jellyfin) ou demander.
+// Une seule rangée « Résultats » : les affiches des films et séries trouvés, mélangés par popularité
+// (plus de rangées par bibliothèque ni de catalogues : moins de chargements, plus léger sur les box TV).
 
 import com.nuvio.tv.data.remote.api.TmdbApi
 import com.nuvio.tv.domain.model.Addon
@@ -13,6 +15,8 @@ import com.nuvio.tv.domain.model.CatalogRow
 import com.nuvio.tv.domain.model.ContentType
 import com.nuvio.tv.domain.model.MetaPreview
 import com.nuvio.tv.domain.model.PosterShape
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 private data class SearchHit(
     val id: Int,
@@ -56,8 +60,7 @@ private data class SearchHit(
 object LumioTmdbSearch {
     const val BASE_URL = "lumio-tmdb://search"
     const val ADDON_ID = "lumio.tmdb"
-    private const val MOVIE_ID = "lumio-tmdb-movie"
-    private const val SERIES_ID = "lumio-tmdb-series"
+    private const val ALL_ID = "lumio-tmdb-all"
 
     fun isTmdbSearch(baseUrl: String?): Boolean = baseUrl == BASE_URL
 
@@ -70,8 +73,7 @@ object LumioTmdbSearch {
         logo = null,
         baseUrl = BASE_URL,
         catalogs = listOf(
-            CatalogDescriptor(type = ContentType.MOVIE, id = MOVIE_ID, name = "Films", extra = listOf(CatalogExtra(name = "search", isRequired = true))),
-            CatalogDescriptor(type = ContentType.SERIES, id = SERIES_ID, name = "Séries", extra = listOf(CatalogExtra(name = "search", isRequired = true)))
+            CatalogDescriptor(type = ContentType.MOVIE, id = ALL_ID, name = "Résultats", extra = listOf(CatalogExtra(name = "search", isRequired = true)))
         ),
         types = listOf(ContentType.MOVIE, ContentType.SERIES),
         resources = listOf(AddonResource(name = "catalog", types = emptyList(), idPrefixes = null))
@@ -89,20 +91,31 @@ object LumioTmdbSearch {
         extraArgs: Map<String, String>
     ): CatalogRow {
         val query = extraArgs["search"].orEmpty().trim()
-        val isSeries = catalogId == SERIES_ID
-        // Recherche faite par le serveur Lumio (sa clé TMDB) ; sinon directement avec la clé de la TV
-        val results: List<SearchHit> = if (query.isBlank()) emptyList() else runCatching {
+
+        // Films et séries en même temps, par le serveur Lumio (sa clé TMDB) ; sinon avec la clé de la TV
+        suspend fun hits(isSeries: Boolean): List<SearchHit> = runCatching {
             val json = client.tmdbSearch(if (isSeries) "tv" else "movie", query)
             val arr = json.optJSONArray("results")
             (0 until (arr?.length() ?: 0)).mapNotNull { i -> arr!!.optJSONObject(i)?.let(SearchHit::fromJson) }
         }.getOrElse {
-            if (!LumioTmdb.available) throw it
-            val response = if (isSeries) api.searchTv(LumioTmdb.key, query, "fr-FR") else api.searchMovies(LumioTmdb.key, query, "fr-FR")
-            response.body()?.results.orEmpty().map(SearchHit::fromDto)
+            if (!LumioTmdb.available) emptyList()
+            else runCatching {
+                val response = if (isSeries) api.searchTv(LumioTmdb.key, query, "fr-FR") else api.searchMovies(LumioTmdb.key, query, "fr-FR")
+                response.body()?.results.orEmpty().map(SearchHit::fromDto)
+            }.getOrDefault(emptyList())
         }
-        val items = results
-            .sortedByDescending { (it.popularity ?: 0.0) + (it.voteCount ?: 0) / 50.0 }
-            .map { r ->
+
+        val found: List<Pair<SearchHit, Boolean>> = if (query.isBlank()) emptyList() else coroutineScope {
+            val movies = async { hits(false) }
+            val series = async { hits(true) }
+            movies.await().map { it to false } + series.await().map { it to true }
+        }
+        val items = found
+            // Sans affiche en dernier, puis par popularité
+            .sortedWith(compareBy<Pair<SearchHit, Boolean>> { it.first.posterPath == null }
+                .thenByDescending { (it.first.popularity ?: 0.0) + (it.first.voteCount ?: 0) / 50.0 })
+            .take(30)
+            .map { (r, isSeries) ->
                 MetaPreview(
                     id = "tmdb:${r.id}",
                     type = if (isSeries) ContentType.SERIES else ContentType.MOVIE,
@@ -124,7 +137,7 @@ object LumioTmdbSearch {
             addonBaseUrl = BASE_URL,
             catalogId = catalogId,
             catalogName = catalogName,
-            type = if (isSeries) ContentType.SERIES else ContentType.MOVIE,
+            type = ContentType.MOVIE,
             rawType = type,
             items = items,
             isLoading = false,

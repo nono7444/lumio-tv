@@ -906,7 +906,9 @@ internal fun PlayerRuntimeController.applyPersistedTrackPreference(
         pendingEngineSwitchTrackPreference = null
     }
     val usingSwitchPending = switchPending != null
-    val pendingCandidate = switchPending?.preference ?: persistedTrackPreference
+    // Lumio : le sous-titre choisi la dernière fois n'est pas remis (on démarre toujours sans) ; la langue audio, si
+    val pendingCandidate = switchPending?.preference
+        ?: persistedTrackPreference?.let { if (com.nuvio.tv.lumio.LumioMode.ENABLED) it.copy(subtitle = null) else it }
     logSwitchTrace(
         stage = "restore-enter",
         message = "usingSwitchPending=$usingSwitchPending switchPending=${switchPending != null} persisted=${persistedTrackPreference != null} " +
@@ -1597,6 +1599,15 @@ private fun audioMatchesSubtitleTargetForForced(audioTrack: TrackInfo, target: S
 internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailableTracks() {
     if (isUserExplicitSubtitleSelection) {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: user explicitly selected current subtitle")
+        return
+    }
+    // Lumio : sous-titres coupés au début de chaque lecture ; on les active soi-même dans le lecteur si besoin
+    if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
+        if (!autoSubtitleSelected) {
+            autoSubtitleSelected = true
+            Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: Lumio, sous-titres coupés au démarrage")
+            disableSubtitles()
+        }
         return
     }
     if (hasBurnedInServerSubtitle) {

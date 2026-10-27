@@ -1197,6 +1197,11 @@ private fun PlaybackNavHost(
             )
         }
 
+        // Lumio : mon rang (écusson, points) et classement de la famille
+        composable(Screen.LumioRewards.route) {
+            com.nuvio.tv.lumio.LumioRewardsScreen()
+        }
+
         composable(Screen.LumioRequests.route) {
             com.nuvio.tv.ui.screens.lumio.LumioRequestsScreen(showBuiltInHeader = !hideBuiltInHeaders)
         }

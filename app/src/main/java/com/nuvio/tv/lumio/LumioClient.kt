@@ -43,7 +43,8 @@ object RequestStatus {
 
 data class LumioSeason(val number: Int, val status: Int)
 /** Suivi Radarr / Sonarr d'une demande validée : searching, downloading, importing, warning. */
-data class LumioDownload(val state: String, val progress: Int?, val message: String?, val count: Int)
+/** via = « secour » : Radarr / Sonarr hors service, Lumio Secour télécharge à leur place (title = étape en cours). */
+data class LumioDownload(val state: String, val progress: Int?, val message: String?, val count: Int, val via: String? = null, val title: String? = null)
 data class LumioRequest(
     val id: String,
     val status: Int,
@@ -216,6 +217,21 @@ class LumioClient(private val context: Context) {
     }
 
     /** Recherche TMDB faite par le serveur Lumio (la clé reste sur le serveur). */
+    /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
+    suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
+
+    /** Admin, bouton « LS » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
+    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?): Boolean {
+        val body = JSONObject()
+            .put("type", type)
+            .put("tmdbId", tmdbId)
+            .put("title", title)
+            .put("year", year ?: JSONObject.NULL)
+            .put("poster", poster ?: JSONObject.NULL)
+        if (seasons != null) body.put("seasons", org.json.JSONArray(seasons))
+        return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
+    }
+
     suspend fun tmdbSearch(type: String, query: String): JSONObject =
         JSONObject(call("GET", "/api/tmdb/search?type=$type&q=" + java.net.URLEncoder.encode(query, "UTF-8")))
 
@@ -409,5 +425,7 @@ private fun JSONObject.toDownload(): LumioDownload = LumioDownload(
     state = optString("state", "searching"),
     progress = if (isNull("progress") || !has("progress")) null else optInt("progress"),
     message = optString("message").takeIf { m -> m.isNotBlank() && m != "null" },
-    count = optInt("count", 1)
+    count = optInt("count", 1),
+    via = optString("via").takeIf { it.isNotBlank() && it != "null" },
+    title = optString("title").takeIf { it.isNotBlank() && it != "null" }
 )

@@ -378,6 +378,9 @@ fun HeroContentSection(
                         // Lumio : demande façon Seerr via le serveur Lumio
                         LumioRequestButton(state = lumio, onFocused = onHeroActionFocused)
 
+                        // Lumio (admin) : « LS », téléchargement direct par Lumio Secour
+                        LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
+
                         // Lumio : ajouter / retirer de la liste « À voir » (la même que sur le téléphone)
                         val wlTmdb = lumio.media?.tmdbId
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && wlTmdb != null) {

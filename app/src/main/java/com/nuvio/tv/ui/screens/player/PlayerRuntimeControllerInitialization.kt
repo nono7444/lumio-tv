@@ -796,7 +796,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                     }
                 }
                 // Forced mode: disable ExoPlayer auto text selection; our logic handles it.
-                if (playerSettings.subtitleStyle.useForcedSubtitles) {
+                // Lumio : aucune piste de sous-titres choisie toute seule au démarrage
+                if (playerSettings.subtitleStyle.useForcedSubtitles || com.nuvio.tv.lumio.LumioMode.ENABLED) {
                     setParameters(buildUponParameters().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true))
                 }
                 // When forced subtitles are disabled, tell ExoPlayer to ignore

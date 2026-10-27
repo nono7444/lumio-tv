@@ -79,14 +79,21 @@ private fun statusOf(r: LumioListedRequest): Triple<String, Color, Float?> {
         RequestStatus.DECLINED -> Triple("Refusée" + (r.reason?.let { " : $it" } ?: ""), Red, null)
         RequestStatus.FAILED -> Triple("Échec" + (r.error?.let { " : $it" } ?: ""), Red, null)
         RequestStatus.COMPLETED -> Triple("Disponible", Green, null)
-        else -> when (d?.state) {
+        else -> when {
+            // Groupe de secours : Radarr / Sonarr hors service, Lumio Secour télécharge à leur place
+            d != null && d.via == "secour" -> Triple("🛟 ${d.title ?: "Lumio Secour"}" + (d.progress?.let { " · $it %" } ?: "") + (if (d.count > 1) " · ${d.count} épisodes restants" else ""), Green, (d.progress ?: 0) / 100f)
+            else -> statusOfArr(d)
+        }
+    }
+}
+
+private fun statusOfArr(d: com.nuvio.tv.lumio.LumioDownload?): Triple<String, Color, Float?> =
+        when (d?.state) {
             "downloading" -> Triple("Téléchargement ${d.progress?.let { "$it %" } ?: "…"}" + (if (d.count > 1) " · ${d.count} épisodes" else ""), Blue, (d.progress ?: 0) / 100f)
             "importing" -> Triple("Ajout au serveur…", Green, 1f)
             "warning" -> Triple("Bloqué : ${d.message ?: "à vérifier"}", Orange, 1f)
             else -> Triple("Recherche d'une source…", Grey, 0f)
         }
-    }
-}
 
 @Composable
 fun LumioRequestsScreen(showBuiltInHeader: Boolean = true) {

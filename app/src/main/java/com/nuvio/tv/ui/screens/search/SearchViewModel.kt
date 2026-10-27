@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -124,7 +125,10 @@ class SearchViewModel @Inject constructor(
                 .collect { ids -> _watchedMovieIds.value = ids }
         }
         viewModelScope.launch {
-            layoutPreferenceDataStore.discoverLocation.distinctUntilChanged().collectLatest { location ->
+            layoutPreferenceDataStore.discoverLocation
+                // Lumio : pas de « Découvrir » (catalogues Netflix…) dans la recherche, juste les résultats
+                .map { if (com.nuvio.tv.lumio.LumioMode.ENABLED) DiscoverLocation.OFF else it }
+                .distinctUntilChanged().collectLatest { location ->
                 _uiState.update { it.copy(discoverLocation = location) }
                 if (location == DiscoverLocation.OFF) {
                     discoverJob?.cancel()
@@ -898,8 +902,8 @@ class SearchViewModel @Inject constructor(
 
     private suspend fun searchAddons(): List<Addon> =
         if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
-            // Lumio : d'abord ce qui est sur Jellyfin, puis TMDB pour trouver (et demander) le reste — pas Cinemeta
-            serverCatalog.searchAddons.first() + com.nuvio.tv.lumio.LumioTmdbSearch.addon
+            // Lumio : une seule rangée TMDB (films et séries) ; la fiche propose Lire (si sur Jellyfin) ou Demander
+            listOf(com.nuvio.tv.lumio.LumioTmdbSearch.addon)
         } else {
             addonRepository.getInstalledAddons().first().enabledAddons() + serverCatalog.searchAddons.first()
         }

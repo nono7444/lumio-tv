@@ -152,6 +152,7 @@ sealed class Screen(val route: String) {
     data object LumioRequests : Screen("lumio_requests")
     data object LumioLive : Screen("lumio_live")
     data object LumioWatchlist : Screen("lumio_watchlist")
+    data object LumioRewards : Screen("lumio_rewards")
     data object ExperienceModeSelection : Screen("experience_mode_selection")
     data object LayoutSelection : Screen("layout_selection")
     data object LayoutSettings : Screen("layout_settings")

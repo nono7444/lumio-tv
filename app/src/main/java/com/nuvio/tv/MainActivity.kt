@@ -52,6 +52,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
@@ -1081,6 +1082,7 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.LumioLive.route)
                             add(Screen.LumioRequests.route)
                             add(Screen.LumioWatchlist.route)
+                            add(Screen.LumioRewards.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
                                 add(Screen.Discover.route)
@@ -1154,6 +1156,14 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LumioRequests.route,
                                     label = "Demandes",
                                     icon = Icons.Default.Inbox
+                                )
+                            )
+                            // Lumio : mon rang (écusson, points) et classement de la famille
+                            add(
+                                DrawerItem(
+                                    route = Screen.LumioRewards.route,
+                                    label = "Mon rang",
+                                    icon = Icons.Default.EmojiEvents
                                 )
                             )
                             add(
@@ -1262,6 +1272,11 @@ open class MainActivity : ComponentActivity() {
 
                             // Lumio : décorations de saison (Halloween, Noël…) sur les écrans principaux, jamais dans le lecteur
                             com.nuvio.tv.lumio.LumioSeasonalOverlay(
+                                visible = currentRoute == Screen.Home.route,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // Lumio : mon rang (écusson) en haut à droite de l'accueil
+                            com.nuvio.tv.lumio.LumioRankBadge(
                                 visible = currentRoute == Screen.Home.route,
                                 modifier = Modifier.fillMaxSize()
                             )

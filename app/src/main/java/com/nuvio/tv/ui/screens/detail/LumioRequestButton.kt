@@ -151,6 +151,9 @@ fun LumioPrimaryButton(
 
     // Texte, couleur et remplissage de la barre
     val (text, tint, fill) = when {
+        // Groupe de secours : Lumio Secour télécharge à la place de Radarr / Sonarr
+        active != null && d != null && d.via == "secour" ->
+            Triple("Lumio Secour ${d.progress?.let { "$it %" } ?: "…"}" + (if (d.count > 1) " · ${d.count} épisodes" else ""), Green, (d.progress ?: 0) / 100f)
         active != null && d?.state == "downloading" ->
             Triple("Téléchargement ${d.progress?.let { "$it %" } ?: "…"}" + (if (d.count > 1) " · ${d.count} épisodes" else ""), Blue, (d.progress ?: 0) / 100f)
         active != null && d?.state == "importing" -> Triple("Ajout au serveur…", Green, 1f)
