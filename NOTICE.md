@@ -21,7 +21,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Sous-titres coupés au début de chaque lecture (on les active soi-même dans le lecteur).
 - « Mon rang » : nom du compte et écusson du rang (dessiné pour Lumio) en haut de l'accueil, écran du classement avec points et progression.
 - Fiche et demandes (admin) : bouton « DL » pour télécharger avec Lumio Secour (aussi sur une demande bloquée ou en échec) ; progression « Lumio Secour » dans les demandes quand Radarr / Sonarr ne répondent pas ou restent bloqués.
-- « Plateformes » (Netflix, Disney+, Prime Video, Apple TV+, Max, Canal+) : leurs titres sur le serveur et leurs dernières sorties, tri du plus récent au plus ancien ou l'inverse.
+- « Plateformes » (Netflix, Disney+, Prime Video, Apple TV+, Max, Canal+) : vignettes noires en verre avec logos blancs, sorties mélangées (sur le serveur ou à demander) par date de sortie, la plus récente ou la plus ancienne d'abord.
 - Pas de marque « vu » sur les affiches (elle reste dans la liste des épisodes).
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
 
