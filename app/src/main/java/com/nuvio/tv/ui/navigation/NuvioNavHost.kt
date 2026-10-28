@@ -214,6 +214,12 @@ private fun PlaybackNavHost(
                 }
             }
 
+            // Lumio : la rangée « Plateformes » de l'accueil ouvre la page de la plateforme
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.nuvio.tv.ui.screens.lumio.LocalLumioOpenPlatform provides { id: String ->
+                    navController.navigate(Screen.LumioPlatforms.createRoute(id))
+                }
+            ) {
             HomeScreen(
                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                     val heroBackdrop = HeroBackdropState.consumeAndClear()
@@ -258,6 +264,7 @@ private fun PlaybackNavHost(
                     navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
                 }
             )
+            }
         }
 
         composable(
@@ -1198,9 +1205,13 @@ private fun PlaybackNavHost(
         }
 
         // Lumio : plateformes (Netflix, Disney+…) : titres sur le serveur et dernières sorties
-        composable(Screen.LumioPlatforms.route) {
+        composable(
+            Screen.LumioPlatforms.route,
+            arguments = listOf(navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null })
+        ) { entry ->
             com.nuvio.tv.ui.screens.lumio.LumioPlatformsScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,
+                initialId = entry.arguments?.getString("id"),
                 onOpen = { type, tmdbId ->
                     navController.navigate(
                         Screen.Detail.createRoute(

@@ -73,12 +73,13 @@ private fun JSONObject.titles(key: String): List<LumioPlatformTitle> {
 @Composable
 fun LumioPlatformsScreen(
     showBuiltInHeader: Boolean = true,
+    initialId: String? = null,
     onOpen: (type: String, tmdbId: Int) -> Unit
 ) {
     val context = LocalContext.current
     val client = remember { LumioClient.get(context) }
     var platforms by remember { mutableStateOf<List<LumioPlatform>?>(null) }
-    var selected by remember { mutableStateOf<String?>(null) }
+    var selected by remember { mutableStateOf(initialId) }
     var sort by remember { mutableStateOf("desc") }
     var shown by remember { mutableStateOf<List<LumioPlatformTitle>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -124,44 +125,7 @@ fun LumioPlatformsScreen(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), contentPadding = PaddingValues(vertical = 6.dp)) {
                 items(platforms ?: emptyList(), key = { it.id }) { pf ->
                     val on = pf.id == selected
-                    Card(
-                        onClick = { selected = pf.id },
-                        shape = CardDefaults.shape(RoundedCornerShape(18.dp)),
-                        colors = CardDefaults.colors(containerColor = Color(0xFF0A0A0B), focusedContainerColor = Color(0xFF0A0A0B)),
-                        modifier = Modifier.width(190.dp).height(104.dp)
-                    ) {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .background(Brush.verticalGradient(listOf(Color(0xFF232327), Color(0xFF050506))))
-                                .border(
-                                    width = if (on) 2.dp else 1.dp,
-                                    color = if (on) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.16f),
-                                    shape = RoundedCornerShape(18.dp)
-                                )
-                        ) {
-                            // Reflet du verre en haut
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(0.55f)
-                                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.04f), Color.Transparent)))
-                            )
-                            Box(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 22.dp), contentAlignment = Alignment.Center) {
-                                if (pf.logo != null) {
-                                    AsyncImage(
-                                        model = pf.logo,
-                                        contentDescription = pf.name,
-                                        contentScale = ContentScale.Fit,
-                                        colorFilter = ColorFilter.tint(Color.White),
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Text(pf.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                                }
-                            }
-                        }
-                    }
+                    LumioPlatformTile(pf, on) { selected = pf.id }
                 }
             }
         }
@@ -251,3 +215,84 @@ private fun PosterGridRow(row: List<LumioPlatformTitle>, onOpen: (String, Int) -
         }
     }
 }
+
+/** Vignette d'une plateforme : verre noir, logo en blanc (façon Apple TV). */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun LumioPlatformTile(pf: LumioPlatform, on: Boolean = false, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        shape = CardDefaults.shape(RoundedCornerShape(18.dp)),
+        colors = CardDefaults.colors(containerColor = Color(0xFF0A0A0B), focusedContainerColor = Color(0xFF0A0A0B)),
+        modifier = Modifier.width(190.dp).height(104.dp)
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(Color(0xFF232327), Color(0xFF050506))))
+                .border(
+                    width = if (on) 2.dp else 1.dp,
+                    color = if (on) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(18.dp)
+                )
+        ) {
+            // Reflet du verre en haut
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.55f)
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.04f), Color.Transparent)))
+            )
+            Box(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 22.dp), contentAlignment = Alignment.Center) {
+                if (pf.logo != null) {
+                    AsyncImage(
+                        model = pf.logo,
+                        contentDescription = pf.name,
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(Color.White),
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(pf.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                }
+            }
+        }
+    }
+}
+
+/** Plateformes déjà chargées (gardées pour l'accueil). */
+private var platformsCache: List<LumioPlatform>? = null
+
+/** Accueil : rangée « Plateformes » ; un clic ouvre la page de la plateforme. */
+@Composable
+fun LumioPlatformsHomeRow(onOpenPlatform: (String) -> Unit) {
+    val context = LocalContext.current
+    val client = remember { LumioClient.get(context) }
+    var platforms by remember { mutableStateOf(platformsCache) }
+    LaunchedEffect(Unit) {
+        if (platforms != null) return@LaunchedEffect
+        runCatching { client.platforms() }.onSuccess { json ->
+            val arr = json.optJSONArray("platforms")
+            platforms = (0 until (arr?.length() ?: 0)).mapNotNull { i ->
+                arr!!.optJSONObject(i)?.let { LumioPlatform(it.optString("id"), it.optString("name"), it.optString("logo").takeIf { l -> l.startsWith("http") }) }
+            }.also { platformsCache = it }
+        }
+    }
+    val list = platforms ?: return
+    if (list.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(
+            "Plateformes",
+            color = NuvioTheme.colors.TextPrimary,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 48.dp)
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(horizontal = 48.dp, vertical = 6.dp)) {
+            items(list, key = { it.id }) { pf -> LumioPlatformTile(pf) { onOpenPlatform(pf.id) } }
+        }
+    }
+}
+
+/** Ouvre la page d'une plateforme depuis l'accueil (fourni par la navigation). */
+val LocalLumioOpenPlatform = androidx.compose.runtime.staticCompositionLocalOf<((String) -> Unit)?> { null }

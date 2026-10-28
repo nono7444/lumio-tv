@@ -275,6 +275,7 @@ internal fun ModernHomeRowsList(
         null
     }
 
+    val openLumioPlatform = if (com.nuvio.tv.lumio.LumioMode.ENABLED) com.nuvio.tv.ui.screens.lumio.LocalLumioOpenPlatform.current else null
     CompositionLocalProvider(
         LocalBringIntoViewSpec provides verticalRowBringIntoViewSpec,
         LocalFastScrollActive provides isFastScrolling,
@@ -322,7 +323,7 @@ internal fun ModernHomeRowsList(
                     onFastScrollingChanged = onFastScrollingChanged,
                     shouldHaltForward = {
                         val info = verticalRowListState.layoutInfo
-                        val lastIdx = carouselRows.list.size - 1
+                        val lastIdx = carouselRows.list.size - 1 + (if (openLumioPlatform != null) 1 else 0)
                         val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
                         lastIdx >= 0 && lastVisible != null &&
                             lastVisible.offset + lastVisible.size <= info.viewportEndOffset
@@ -479,6 +480,12 @@ internal fun ModernHomeRowsList(
                         StableRef(mutableMapOf())
                     }
                 )
+            }
+            // Lumio : rangée « Plateformes » (Netflix, Disney+…) en bas de l'accueil (pas dans les dossiers)
+            if (openLumioPlatform != null) {
+                item(key = "lumio_platforms", contentType = "lumio_platforms") {
+                    com.nuvio.tv.ui.screens.lumio.LumioPlatformsHomeRow(onOpenPlatform = openLumioPlatform)
+                }
             }
         }
     }
