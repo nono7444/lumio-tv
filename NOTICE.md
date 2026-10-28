@@ -19,7 +19,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison, fond de l'accueil (Halloween, Noël), pas d'écran de démarrage, nom « lumio » dans le style de Nuvio (lettres reprises du logo Nuvio), profils de la famille (un compte Jellyfin chacun), passer l'intro via les segments Jellyfin, état des disques, liste « À voir », accueil épuré (Reprendre + Nouveautés par bibliothèque) et rangée de saison « Halloween » / « Noël ».
 - Recherche simplifiée : une seule rangée d'affiches (films et séries TMDB mélangés), sans « Découvrir » ni catalogues ; la fiche propose Lire ou Demander.
 - Sous-titres coupés au début de chaque lecture (on les active soi-même dans le lecteur).
-- « Mon rang » : nom du compte et rang (écusson dessiné pour Lumio) en haut de l'accueil, écran du classement avec points et progression.
+- « Mon rang » : nom du compte et écusson du rang (dessiné pour Lumio) en haut de l'accueil, écran du classement avec points et progression.
 - Fiche (admin) : bouton « LS » pour télécharger directement avec Lumio Secour ; progression « Lumio Secour » dans les demandes quand Radarr / Sonarr ne répondent pas.
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
 
