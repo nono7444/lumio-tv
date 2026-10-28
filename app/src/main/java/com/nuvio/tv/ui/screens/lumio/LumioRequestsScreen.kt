@@ -173,6 +173,14 @@ fun LumioRequestsScreen(showBuiltInHeader: Boolean = true) {
                                 android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
                                 tick++
                             }
+                        },
+                        onSecour = {
+                            scope.launch {
+                                val msg = runCatching { client.secourViaRequest(r.id); "« ${r.title} » part avec Lumio Secour" }
+                                    .getOrElse { it.message ?: "Lumio Secour : impossible" }
+                                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+                                tick++
+                            }
                         }
                     )
                 }
@@ -189,7 +197,8 @@ private fun RequestCard(
     onDecline: () -> Unit,
     onRetry: () -> Unit,
     onCancel: () -> Unit,
-    onRecheck: () -> Unit
+    onRecheck: () -> Unit,
+    onSecour: () -> Unit
 ) {
     val (label, color, progress) = statusOf(r)
     // Chaque carte peut recevoir le focus : on descend / monte dans la liste avec la télécommande
@@ -197,6 +206,11 @@ private fun RequestCard(
     val canRecheck = r.status == RequestStatus.APPROVED &&
         (r.download == null || r.download.state == "searching" || r.download.state == "partial" || r.download.state == "warning") &&
         (admin || r.mine)
+    // « LS » (admin) : Radarr / Sonarr bloqués ou en échec → Lumio Secour prend le relais
+    val canSecour = admin && r.download?.via != "secour" && (
+        r.status == RequestStatus.FAILED ||
+            (r.status == RequestStatus.APPROVED && (r.download == null || r.download.state == "searching" || r.download.state == "partial" || r.download.state == "warning"))
+        )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,6 +279,19 @@ private fun RequestCard(
             }
             if (canRecheck) {
                 SmallButton("Relancer", Icons.Default.Refresh, Blue, onRecheck)
+            }
+            if (canSecour) {
+                Button(
+                    onClick = onSecour,
+                    colors = ButtonDefaults.colors(
+                        containerColor = Green.copy(alpha = 0.2f),
+                        contentColor = Green,
+                        focusedContainerColor = Green,
+                        focusedContentColor = Color.Black
+                    )
+                ) {
+                    Text("LS", fontWeight = FontWeight.Black)
+                }
             }
         }
     }

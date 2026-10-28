@@ -232,6 +232,11 @@ class LumioClient(private val context: Context) {
         return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
     }
 
+    /** Admin, « LS » d'une demande bloquée : Lumio Secour la télécharge à la place de Radarr / Sonarr. */
+    suspend fun secourViaRequest(id: String) {
+        call("POST", "/api/secour/requests/$id", JSONObject())
+    }
+
     suspend fun tmdbSearch(type: String, query: String): JSONObject =
         JSONObject(call("GET", "/api/tmdb/search?type=$type&q=" + java.net.URLEncoder.encode(query, "UTF-8")))
 
