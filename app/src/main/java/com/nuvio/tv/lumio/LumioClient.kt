@@ -217,6 +217,12 @@ class LumioClient(private val context: Context) {
     }
 
     /** Recherche TMDB faite par le serveur Lumio (la clé reste sur le serveur). */
+    /** Plateformes (Netflix, Disney+…) : logos. */
+    suspend fun platforms(): JSONObject = JSONObject(call("GET", "/api/platforms"))
+
+    /** Une plateforme : ses titres sur le serveur (« library ») et ses dernières sorties (« latest »). */
+    suspend fun platformPage(id: String, sort: String): JSONObject = JSONObject(call("GET", "/api/platforms/$id?sort=$sort"))
+
     /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
 

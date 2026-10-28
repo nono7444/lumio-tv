@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
@@ -1083,6 +1084,7 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.LumioRequests.route)
                             add(Screen.LumioWatchlist.route)
                             add(Screen.LumioRewards.route)
+                            add(Screen.LumioPlatforms.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
                                 add(Screen.Discover.route)
@@ -1140,6 +1142,14 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LumioLive.route,
                                     label = "Live TV",
                                     icon = Icons.Default.LiveTv
+                                )
+                            )
+                            // Lumio : plateformes (Netflix, Disney+…), comme sur le téléphone
+                            add(
+                                DrawerItem(
+                                    route = Screen.LumioPlatforms.route,
+                                    label = "Plateformes",
+                                    icon = Icons.Default.Apps
                                 )
                             )
                             // Lumio : liste « À voir » (la même que sur le téléphone)

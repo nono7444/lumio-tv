@@ -1197,6 +1197,22 @@ private fun PlaybackNavHost(
             )
         }
 
+        // Lumio : plateformes (Netflix, Disney+…) : titres sur le serveur et dernières sorties
+        composable(Screen.LumioPlatforms.route) {
+            com.nuvio.tv.ui.screens.lumio.LumioPlatformsScreen(
+                showBuiltInHeader = !hideBuiltInHeaders,
+                onOpen = { type, tmdbId ->
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            "tmdb:$tmdbId",
+                            if (type == "tv") "series" else "movie",
+                            com.nuvio.tv.lumio.LumioTmdbSearch.BASE_URL
+                        )
+                    )
+                }
+            )
+        }
+
         // Lumio : mon rang (écusson, points) et classement de la famille
         composable(Screen.LumioRewards.route) {
             com.nuvio.tv.lumio.LumioRewardsScreen()

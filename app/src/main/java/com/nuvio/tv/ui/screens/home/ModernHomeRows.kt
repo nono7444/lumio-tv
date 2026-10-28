@@ -1505,7 +1505,8 @@ private fun ModernCarouselCard(
                     )
                 }
 
-                if (isWatched) {
+                // Lumio : pas de pastille « vu » sur les affiches (vignettes plus épurées)
+                if (isWatched && !com.nuvio.tv.lumio.LumioMode.ENABLED) {
                     WatchedMarker(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
