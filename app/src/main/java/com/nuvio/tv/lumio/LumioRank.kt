@@ -191,18 +191,40 @@ fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier) {
         me = board.first.firstOrNull { it.id == board.second }
     }
     val m = me ?: return
+    val tier = TIERS[m.tier.coerceIn(0, TIERS.lastIndex)]
+    // Couleur du rang : doré pour les écussons dorés, sinon la teinte claire de l'écusson
+    val accent = if (tier.inner != null) GOLD_LIGHT else tier.light
     Box(modifier = modifier.focusProperties { canFocus = false }, contentAlignment = Alignment.TopEnd) {
         Row(
             modifier = Modifier
-                .padding(top = 18.dp, end = 28.dp)
-                .clip(RoundedCornerShape(50))
-                .background(Color(0x99000000))
-                .padding(start = 8.dp, end = 14.dp, top = 5.dp, bottom = 5.dp),
+                .padding(top = 20.dp, end = 32.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Brush.horizontalGradient(listOf(Color(0x00000000), Color(0xB3000000))))
+                .padding(start = 18.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            LumioRankShield(m.tier, 22.dp)
-            Text(m.gradeName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                // Nom du compte : gros, serré, comme un titre
+                Text(
+                    m.name,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.4).sp,
+                    maxLines = 1
+                )
+                // Rang : petites capitales espacées, dans la couleur de l'écusson
+                Text(
+                    m.gradeName.uppercase(),
+                    color = accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.4.sp,
+                    maxLines = 1
+                )
+            }
+            LumioRankShield(m.tier, 34.dp)
         }
     }
 }
