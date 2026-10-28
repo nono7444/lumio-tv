@@ -220,7 +220,7 @@ class LumioClient(private val context: Context) {
     /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
 
-    /** Admin, bouton « LS » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
+    /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
     suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?): Boolean {
         val body = JSONObject()
             .put("type", type)
@@ -232,7 +232,7 @@ class LumioClient(private val context: Context) {
         return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
     }
 
-    /** Admin, « LS » d'une demande bloquée : Lumio Secour la télécharge à la place de Radarr / Sonarr. */
+    /** Admin, « DL » d'une demande bloquée : Lumio Secour la télécharge à la place de Radarr / Sonarr. */
     suspend fun secourViaRequest(id: String) {
         call("POST", "/api/secour/requests/$id", JSONObject())
     }

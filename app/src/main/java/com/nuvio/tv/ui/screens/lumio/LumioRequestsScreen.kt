@@ -206,7 +206,7 @@ private fun RequestCard(
     val canRecheck = r.status == RequestStatus.APPROVED &&
         (r.download == null || r.download.state == "searching" || r.download.state == "partial" || r.download.state == "warning") &&
         (admin || r.mine)
-    // « LS » (admin) : Radarr / Sonarr bloqués ou en échec → Lumio Secour prend le relais
+    // « DL » (admin) : Radarr / Sonarr bloqués ou en échec → Lumio Secour prend le relais
     val canSecour = admin && r.download?.via != "secour" && (
         r.status == RequestStatus.FAILED ||
             (r.status == RequestStatus.APPROVED && (r.download == null || r.download.state == "searching" || r.download.state == "partial" || r.download.state == "warning"))
@@ -290,7 +290,7 @@ private fun RequestCard(
                         focusedContentColor = Color.Black
                     )
                 ) {
-                    Text("LS", fontWeight = FontWeight.Black)
+                    Text("DL", fontWeight = FontWeight.Black)
                 }
             }
         }

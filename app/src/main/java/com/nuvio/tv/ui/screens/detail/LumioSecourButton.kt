@@ -1,6 +1,6 @@
 package com.nuvio.tv.ui.screens.detail
 
-// Lumio : bouton rond « LS » de la fiche (admin) — téléchargement direct par Lumio Secour, comme sur le téléphone.
+// Lumio : bouton rond « DL » de la fiche (admin) — téléchargement direct par Lumio Secour, comme sur le téléphone.
 // Lumio Secour (serveur Lumio) trouve le meilleur fichier, le convertit avec AllDebrid et le range sur le disque ;
 // la progression apparaît dans « Demandes ». Série : une saison ou toutes.
 
@@ -43,7 +43,10 @@ private val SecourGreen = Color(0xFF30D158)
 @Composable
 fun LumioSecourButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
     if (!LumioMode.ENABLED) return
-    val tmdbId = state.media?.tmdbId ?: return
+    val media = state.media ?: return
+    // « DL » seulement si le titre n'est pas (entièrement) disponible sur le serveur
+    if (media.status == com.nuvio.tv.lumio.MediaStatus.AVAILABLE) return
+    val tmdbId = media.tmdbId ?: return
     var admin by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { admin = runCatching { state.client.me().admin }.getOrDefault(false) }
     if (!admin) return
@@ -63,7 +66,7 @@ fun LumioSecourButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
             .size(48.dp)
             .onFocusChanged { if (it.isFocused) onFocused() }
     ) {
-        Text("LS", fontSize = 16.sp, fontWeight = FontWeight.Black)
+        Text("DL", fontSize = 16.sp, fontWeight = FontWeight.Black)
     }
 
     if (dialog) {

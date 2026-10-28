@@ -20,7 +20,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Recherche simplifiée : une seule rangée d'affiches (films et séries TMDB mélangés), sans « Découvrir » ni catalogues ; la fiche propose Lire ou Demander.
 - Sous-titres coupés au début de chaque lecture (on les active soi-même dans le lecteur).
 - « Mon rang » : nom du compte et écusson du rang (dessiné pour Lumio) en haut de l'accueil, écran du classement avec points et progression.
-- Fiche et demandes (admin) : bouton « LS » pour télécharger avec Lumio Secour (aussi sur une demande bloquée ou en échec) ; progression « Lumio Secour » dans les demandes quand Radarr / Sonarr ne répondent pas ou restent bloqués.
+- Fiche et demandes (admin) : bouton « DL » pour télécharger avec Lumio Secour (aussi sur une demande bloquée ou en échec) ; progression « Lumio Secour » dans les demandes quand Radarr / Sonarr ne répondent pas ou restent bloqués.
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.
