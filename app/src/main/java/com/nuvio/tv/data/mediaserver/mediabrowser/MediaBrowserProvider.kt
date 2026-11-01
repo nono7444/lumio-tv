@@ -445,7 +445,10 @@ internal abstract class MediaBrowserProvider(
                 "audioStreamIndex" to body.audioStreamIndex?.toString(),
                 "subtitleStreamIndex" to body.subtitleStreamIndex?.toString(),
                 "maxStreamingBitrate" to body.maxStreamingBitrate.toString(),
-                "enableDirectPlay" to body.enableDirectPlay.toString()
+                "enableDirectPlay" to body.enableDirectPlay.toString(),
+                // Lumio : qualité choisie → vraie conversion (pas de copie de la vidéo d'origine)
+                "enableDirectStream" to if (request.capabilities.maxBitrate != null) "false" else null,
+                "allowVideoStreamCopy" to if (request.capabilities.maxBitrate != null) "false" else null
             ),
             body = client.json.encodeToString(PlaybackInfoRequest.serializer(), body)
         )
@@ -482,8 +485,9 @@ internal abstract class MediaBrowserProvider(
                 )
             ) to ServerPlayMethod.DIRECT_PLAY
 
-            source.transcodingUrl != null -> withApiKey(session.resolve(source.transcodingUrl), session.token) to
-                if (source.supportsDirectStream) ServerPlayMethod.DIRECT_STREAM else ServerPlayMethod.TRANSCODE
+            source.transcodingUrl != null -> lumioForceQuality(withApiKey(session.resolve(source.transcodingUrl), session.token), request.capabilities.maxBitrate) to
+                if (request.capabilities.maxBitrate != null) ServerPlayMethod.TRANSCODE
+                else if (source.supportsDirectStream) ServerPlayMethod.DIRECT_STREAM else ServerPlayMethod.TRANSCODE
 
             else -> throw ServerException(ServerFailure.UNSUPPORTED)
         }
@@ -656,6 +660,33 @@ internal abstract class MediaBrowserProvider(
             TEXT_SUBTITLES.map { SubtitleProfile(format = it, method = "External") } +
             IMAGE_SUBTITLES.map { SubtitleProfile(format = it, method = "Encode") }
     )
+
+    /**
+     * Lumio : avec une qualité choisie (1080p / 720p / 480p), Jellyfin (12 surtout) recopiait souvent la vidéo
+     * d'origine telle quelle ; on impose la conversion en H.264 à la taille et au débit demandés.
+     */
+    private fun lumioForceQuality(url: String, maxBitrate: Long?): String {
+        if (maxBitrate == null) return url
+        val height = when {
+            maxBitrate >= 10_000_000L -> 1080
+            maxBitrate >= 4_000_000L -> 720
+            else -> 480
+        }
+        var u = url
+        fun set(name: String, value: String) {
+            val re = Regex("([?&])" + Regex.escape(name) + "=[^&]*", RegexOption.IGNORE_CASE)
+            u = if (re.containsMatchIn(u)) re.replace(u) { it.groupValues[1] + name + "=" + value }
+            else u + (if ('?' in u) "&" else "?") + name + "=" + value
+        }
+        set("AllowVideoStreamCopy", "false")
+        set("EnableAutoStreamCopy", "false")
+        set("VideoCodec", "h264")
+        set("MaxHeight", height.toString())
+        set("MaxWidth", (height * 16 / 9).toString())
+        set("MaxStreamingBitrate", maxBitrate.toString())
+        set("VideoBitrate", (maxBitrate * 9 / 10).toString())
+        return u
+    }
 
     private fun withApiKey(url: String, token: String): String {
         if (queryValue(url, API_KEY) != null || queryValue(url, "ApiKey") != null) return url
