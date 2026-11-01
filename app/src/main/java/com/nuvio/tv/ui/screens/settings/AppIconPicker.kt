@@ -74,7 +74,7 @@ internal fun AppIconPickerDialog(
         contentSpacing = 12.dp
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            AppIconOption.entries.chunked(3).forEach { options ->
+            AppIconOption.entries.filter { it != AppIconOption.HALLOWEEN && it != AppIconOption.CHRISTMAS && it != AppIconOption.VALENTINE }.chunked(3).forEach { options ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)

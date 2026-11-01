@@ -26,6 +26,6 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
 - Décorations de saison et rangée de saison qui suivent le thème choisi (Aucun, Selon la saison, Halloween, Noël).
 - Accueil sans rond de chargement ni animation d'apparition ; « À voir » en affiches plus petites.
-- Icône et bannière de l'appli redessinées pour Lumio, en verre translucide façon iOS 26 (« Lumio TV »), bords arrondis, avec un logo pour Halloween, Noël / Nouvel An et la Saint-Valentin mis automatiquement selon la date (sauf si un logo de couleur a été choisi).
+- Icône et bannière de l'appli redessinées pour Lumio, en verre translucide façon iOS 26 (« Lumio TV »), bords arrondis (les logos de saison automatiques ont été retirés : ils faisaient disparaître l'appli de certains lanceurs, dont celui de la box Freebox).
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

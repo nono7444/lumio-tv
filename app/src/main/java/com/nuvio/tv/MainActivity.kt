@@ -1449,9 +1449,9 @@ open class MainActivity : ComponentActivity() {
         // App going to background (e.g. user returning to the launcher): reconcile the
         // Continue Watching channel once so Projectivy repaints it with fresh progress.
         androidTvChannelSyncService.onForegroundChanged(false)
-        // Lumio : logo de la période (Halloween, Noël, Saint-Valentin) changé en arrière-plan
+        // Lumio : retour au logo normal si un logo de saison est encore actif (plus de changement automatique)
         if (com.nuvio.tv.lumio.LumioMode.ENABLED && !isChangingConfigurations) {
-            runCatching { appIconManager.applySeasonal() }
+            runCatching { appIconManager.restoreOriginalIfSeasonal() }
         }
     }
 

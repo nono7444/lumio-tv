@@ -35,22 +35,14 @@ class AppIconManager @Inject constructor(
     )
 
     /**
-     * Lumio : logo de la période (Halloween, Noël / Nouvel An, Saint-Valentin), sinon le logo normal.
-     * Appelé quand l'appli passe en arrière-plan, pour ne pas fermer l'écran en cours.
-     * Ne touche pas à un logo de couleur choisi à la main.
+     * Lumio : les logos de saison changeaient l'entrée de l'appli dans le lanceur, et certains lanceurs
+     * (box Freebox notamment) faisaient alors disparaître l'appli. On revient une fois pour toutes au logo normal
+     * si un logo de saison est encore actif. Appelé quand l'appli passe en arrière-plan.
      */
-    fun applySeasonal() {
-        val seasonal = setOf(AppIconOption.ORIGINAL, AppIconOption.HALLOWEEN, AppIconOption.CHRISTMAS, AppIconOption.VALENTINE)
-        val current = currentOption()
-        if (current !in seasonal) return
-        val target = when (com.nuvio.tv.lumio.currentDecoSeason()) {
-            com.nuvio.tv.lumio.LumioDecoSeason.HALLOWEEN -> AppIconOption.HALLOWEEN
-            com.nuvio.tv.lumio.LumioDecoSeason.CHRISTMAS, com.nuvio.tv.lumio.LumioDecoSeason.NEW_YEAR -> AppIconOption.CHRISTMAS
-            com.nuvio.tv.lumio.LumioDecoSeason.VALENTINE -> AppIconOption.VALENTINE
-            else -> AppIconOption.ORIGINAL
-        }
-        if (target == current) return
-        if (activate(target)) _state.value = AppIconSettingsState(selected = target)
+    fun restoreOriginalIfSeasonal() {
+        val seasonal = setOf(AppIconOption.HALLOWEEN, AppIconOption.CHRISTMAS, AppIconOption.VALENTINE)
+        if (currentOption() !in seasonal) return
+        if (activate(AppIconOption.ORIGINAL)) _state.value = AppIconSettingsState(selected = AppIconOption.ORIGINAL)
     }
 
     private val _state = MutableStateFlow(AppIconSettingsState())
