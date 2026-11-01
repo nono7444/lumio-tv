@@ -185,6 +185,12 @@ fun HomeScreen(
         }
         // Wait until catalog loading has completed with content AND the CW
         // pipeline has completed its first emission.
+        // Lumio : l'accueil s'affiche dès la première rangée prête, sans attendre les catalogues les plus lents
+        if (!homeStableGateReleased && com.nuvio.tv.lumio.LumioMode.ENABLED && modernPresentationReady &&
+            (hasCatalogContent || hasCollectionContent || uiState.continueWatchingItems.isNotEmpty())
+        ) {
+            homeStableGateReleased = true
+        }
         if (!homeStableGateReleased &&
             catalogLoadingStarted &&
             !uiState.isLoading &&
@@ -203,7 +209,7 @@ fun HomeScreen(
         // window, show whatever is available.  Covers edge cases like
         // clean cache (addons loading from remote sync) and users with
         // no addons at all.
-        delay(HOME_STABLE_GATE_TIMEOUT_MS)
+        delay(if (com.nuvio.tv.lumio.LumioMode.ENABLED) 2_000L else HOME_STABLE_GATE_TIMEOUT_MS)
         if (!homeStableGateReleased) {
             Log.d("HomeGate", "RELEASE timeout: isLoading=${uiState.isLoading} cwResolved=$initialCwResolved catalogs=$hasCatalogContent cwItems=${uiState.continueWatchingItems.size}")
             homeStableGateReleased = true

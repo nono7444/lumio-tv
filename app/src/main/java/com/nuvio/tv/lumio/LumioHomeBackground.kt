@@ -57,8 +57,9 @@ fun LumioHomeBackdrop(modifier: Modifier = Modifier) {
     val choice by LumioHomeBackground.choice.collectAsState()
     val res = LumioHomeBackground.drawable(choice) ?: return
     Box(modifier = modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(res),
+        // Décodé hors du fil principal par Coil (plus de saccade à l'ouverture de l'appli)
+        coil3.compose.AsyncImage(
+            model = res,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

@@ -191,6 +191,7 @@ fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier, onOpen: () -
     var me by remember { mutableStateOf<LumioRankMember?>(null) }
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1_500) // l'accueil d'abord
         val board = LumioRankStore.load(LumioClient.get(context)) ?: return@LaunchedEffect
         me = board.first.firstOrNull { it.id == board.second }
     }

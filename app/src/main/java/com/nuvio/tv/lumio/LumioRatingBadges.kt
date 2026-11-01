@@ -61,6 +61,8 @@ object LumioRatingBadges {
     fun start(context: Context) {
         val app = context.applicationContext
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+            // Laisse l'accueil se charger d'abord (box TV peu puissantes)
+            kotlinx.coroutines.delay(6_000)
             while (true) {
                 refresh(app, force = true)
                 kotlinx.coroutines.delay(if (_summary.value.isEmpty()) 30_000 else 5 * 60_000L)
