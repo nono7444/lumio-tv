@@ -1082,7 +1082,6 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.LumioLive.route)
                             add(Screen.LumioRequests.route)
                             add(Screen.LumioWatchlist.route)
-                            add(Screen.LumioRewards.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
                                 add(Screen.Discover.route)
@@ -1156,14 +1155,6 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LumioRequests.route,
                                     label = "Demandes",
                                     icon = Icons.Default.Inbox
-                                )
-                            )
-                            // Lumio : mon rang (écusson, points) et classement de la famille
-                            add(
-                                DrawerItem(
-                                    route = Screen.LumioRewards.route,
-                                    label = "Mon rang",
-                                    icon = Icons.Default.EmojiEvents
                                 )
                             )
                             add(
@@ -1278,7 +1269,8 @@ open class MainActivity : ComponentActivity() {
                             // Lumio : mon rang (écusson) en haut à droite de l'accueil
                             com.nuvio.tv.lumio.LumioRankBadge(
                                 visible = currentRoute == Screen.Home.route,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                onOpen = { navController.navigate(Screen.LumioRewards.route) }
                             )
 
                             val autoNextOverlay by externalPlaybackTracker.autoNextOverlay.collectAsState()

@@ -6,6 +6,8 @@ package com.nuvio.tv.lumio
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -182,21 +185,29 @@ object LumioRankStore {
 
 /** Pastille du rang en haut à droite de l'accueil (rien à sélectionner : le menu « Mon rang » ouvre les stats). */
 @Composable
-fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier) {
+fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier, onOpen: () -> Unit = {}) {
     if (!LumioMode.ENABLED || !visible) return
     val context = LocalContext.current
     var me by remember { mutableStateOf<LumioRankMember?>(null) }
+    var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val board = LumioRankStore.load(LumioClient.get(context)) ?: return@LaunchedEffect
         me = board.first.firstOrNull { it.id == board.second }
     }
     val m = me ?: return
-    Box(modifier = modifier.focusProperties { canFocus = false }, contentAlignment = Alignment.TopEnd) {
+    // Seul accès à « Mon rang » (plus d'onglet) : flèche du haut depuis l'accueil, puis OK
+    Box(modifier = modifier, contentAlignment = Alignment.TopEnd) {
         Row(
             modifier = Modifier
                 .padding(top = 20.dp, end = 32.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(Brush.horizontalGradient(listOf(Color(0x00000000), Color(0xB3000000))))
+                .background(
+                    if (focused) Brush.horizontalGradient(listOf(Color(0x33FFFFFF), Color(0x55FFFFFF)))
+                    else Brush.horizontalGradient(listOf(Color(0x00000000), Color(0xB3000000)))
+                )
+                .border(if (focused) 2.dp else 0.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(18.dp))
+                .onFocusChanged { focused = it.isFocused }
+                .clickable { onOpen() }
                 .padding(start = 18.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)

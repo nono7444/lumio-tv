@@ -5,7 +5,7 @@ package com.nuvio.tv.lumio
 data class LumioSeasonRowDef(val title: String, val genres: List<String>, val searches: List<String>)
 
 object LumioSeasonRow {
-    fun current(): LumioSeasonRowDef? = when (currentDecoSeason()) {
+    fun current(): LumioSeasonRowDef? = when (activeDecoSeason()) {
         LumioDecoSeason.HALLOWEEN -> LumioSeasonRowDef(
             title = "Halloween",
             genres = listOf("Horreur", "Horror", "Épouvante", "Epouvante", "Épouvante-Horreur"),

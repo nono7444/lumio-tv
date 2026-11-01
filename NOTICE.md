@@ -19,10 +19,13 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Choix de la qualité dans le lecteur, bibliothèque en tuiles avec les sagas de Lumio, Live TV, connexion par QR code, décorations de saison, fond de l'accueil (Halloween, Noël), pas d'écran de démarrage, nom « lumio » dans le style de Nuvio (lettres reprises du logo Nuvio), profils de la famille (un compte Jellyfin chacun), passer l'intro via les segments Jellyfin, état des disques, liste « À voir », accueil épuré (Reprendre + Nouveautés par bibliothèque) et rangée de saison « Halloween » / « Noël ».
 - Recherche simplifiée : une seule rangée d'affiches (films et séries TMDB mélangés), sans « Découvrir » ni catalogues ; la fiche propose Lire ou Demander.
 - Sous-titres coupés au début de chaque lecture (on les active soi-même dans le lecteur).
-- « Mon rang » : nom du compte et écusson du rang (dessiné pour Lumio) en haut de l'accueil, écran du classement avec points et progression.
+- « Mon rang » : nom du compte et écusson du rang (dessiné pour Lumio) en haut de l'accueil ; on l'ouvre depuis cet écusson (plus d'onglet dans le menu), écran du classement avec points et progression.
 - Fiche et demandes (admin) : bouton « DL » pour télécharger avec Lumio Secour (aussi sur une demande bloquée ou en échec) ; progression « Lumio Secour » dans les demandes quand Radarr / Sonarr ne répondent pas ou restent bloqués.
 - « Plateformes » en rangée sur l'accueil (Netflix, Disney+, Prime Video, Apple TV+, Max, Canal+) : vignettes noires en verre avec logos blancs, sorties mélangées (sur le serveur ou à demander) par date de sortie, la plus récente ou la plus ancienne d'abord.
 - Pas de marque « vu » sur les affiches (elle reste dans la liste des épisodes).
 - Optimisations pour les box TV : images du serveur à la taille de l'écran, pas d'agrandissement du fond au focus par défaut, décorations fixes (accueil seulement), notes chargées une seule fois.
+- Décorations de saison et rangée de saison qui suivent le thème choisi (Aucun, Selon la saison, Halloween, Noël).
+- Accueil sans rond de chargement ni animation d'apparition ; « À voir » en affiches plus petites.
+- Icône et bannière de l'appli redessinées pour Lumio.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

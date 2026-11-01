@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,11 +51,19 @@ fun currentDecoSeason(today: LocalDate = LocalDate.now()): LumioDecoSeason {
     }
 }
 
+/** Saison des décorations selon le thème choisi (Paramètres → Lumio) : « Aucun » coupe tout, « Selon la saison » suit la date. */
+fun activeDecoSeason(choice: LumioHomeBg = LumioHomeBackground.choice.value): LumioDecoSeason = when (choice) {
+    LumioHomeBg.NONE -> LumioDecoSeason.NONE
+    LumioHomeBg.HALLOWEEN -> LumioDecoSeason.HALLOWEEN
+    LumioHomeBg.CHRISTMAS -> LumioDecoSeason.CHRISTMAS
+    LumioHomeBg.AUTO -> currentDecoSeason()
+}
 
 @Composable
 fun LumioSeasonalOverlay(visible: Boolean, modifier: Modifier = Modifier) {
     if (!LumioMode.ENABLED || !visible) return
-    val season = remember { currentDecoSeason() }
+    val choice by LumioHomeBackground.choice.collectAsState()
+    val season = remember(choice) { activeDecoSeason(choice) }
     if (season == LumioDecoSeason.NONE) return
 
     // Décor FIXE (aucune animation) : dessiné une seule fois, aucun coût pendant la navigation

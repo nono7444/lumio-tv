@@ -103,7 +103,7 @@ fun LumioWatchlistScreen(
                 color = NuvioTheme.colors.TextSecondary
             )
             else -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(150.dp),
+                columns = GridCells.Adaptive(112.dp),
                 contentPadding = PaddingValues(bottom = 48.dp, top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(18.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),

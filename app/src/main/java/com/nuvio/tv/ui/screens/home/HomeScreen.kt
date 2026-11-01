@@ -356,7 +356,7 @@ fun HomeScreen(
                     }
                     AnimatedVisibility(
                         visible = showHomeContentWithAnimation,
-                        enter = if (hasShownInitialHomeContent) {
+                        enter = if (hasShownInitialHomeContent || com.nuvio.tv.lumio.LumioMode.ENABLED) {
                             EnterTransition.None
                         } else {
                             fadeIn(animationSpec = tween(320)) +
@@ -415,7 +415,8 @@ fun HomeScreen(
             }
         }
 
-        if (showHomeLoader) {
+        // Lumio : pas de rond de chargement au démarrage (l'accueil apparaît directement)
+        if (showHomeLoader && !com.nuvio.tv.lumio.LumioMode.ENABLED) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
