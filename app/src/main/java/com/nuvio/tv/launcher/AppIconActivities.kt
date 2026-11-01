@@ -13,3 +13,9 @@ class AppIconRoseGold : MainActivity()
 class AppIconCopper : MainActivity()
 
 class AppIconGraphite : MainActivity()
+
+class AppIconHalloween : MainActivity()
+
+class AppIconChristmas : MainActivity()
+
+class AppIconValentine : MainActivity()

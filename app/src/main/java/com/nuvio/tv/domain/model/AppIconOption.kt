@@ -6,5 +6,9 @@ enum class AppIconOption(val key: String) {
     EMERALD("emerald"),
     ROSE_GOLD("rose_gold"),
     COPPER("copper"),
-    GRAPHITE("graphite")
+    GRAPHITE("graphite"),
+    // Lumio : logos de saison, mis automatiquement selon la date
+    HALLOWEEN("halloween"),
+    CHRISTMAS("christmas"),
+    VALENTINE("valentine")
 }

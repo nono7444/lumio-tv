@@ -241,6 +241,9 @@ internal val AppIconOption.iconResource: Int
         AppIconOption.ROSE_GOLD -> R.mipmap.ic_launcher_rose_gold
         AppIconOption.COPPER -> R.mipmap.ic_launcher_copper
         AppIconOption.GRAPHITE -> R.mipmap.ic_launcher_graphite
+        AppIconOption.HALLOWEEN -> R.mipmap.ic_launcher_halloween
+        AppIconOption.CHRISTMAS -> R.mipmap.ic_launcher_christmas
+        AppIconOption.VALENTINE -> R.mipmap.ic_launcher_valentine
     }
 
 internal val AppIconOption.bannerResource: Int
@@ -251,6 +254,9 @@ internal val AppIconOption.bannerResource: Int
         AppIconOption.ROSE_GOLD -> R.mipmap.banner_rose_gold
         AppIconOption.COPPER -> R.mipmap.banner_copper
         AppIconOption.GRAPHITE -> R.mipmap.banner_graphite
+        AppIconOption.HALLOWEEN -> R.mipmap.banner_halloween
+        AppIconOption.CHRISTMAS -> R.mipmap.banner_christmas
+        AppIconOption.VALENTINE -> R.mipmap.banner_valentine
     }
 
 @Composable
@@ -261,4 +267,7 @@ internal fun AppIconOption.localizedName(): String = when (this) {
     AppIconOption.ROSE_GOLD -> stringResource(R.string.appearance_app_icon_rose_gold)
     AppIconOption.COPPER -> stringResource(R.string.appearance_app_icon_copper)
     AppIconOption.GRAPHITE -> stringResource(R.string.appearance_app_icon_graphite)
+    AppIconOption.HALLOWEEN -> "Halloween"
+    AppIconOption.CHRISTMAS -> "Noël"
+    AppIconOption.VALENTINE -> "Saint-Valentin"
 }

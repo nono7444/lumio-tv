@@ -28,8 +28,30 @@ class AppIconManager @Inject constructor(
         AppIconOption.EMERALD to "com.nuvio.tv.launcher.AppIconEmerald",
         AppIconOption.ROSE_GOLD to "com.nuvio.tv.launcher.AppIconRoseGold",
         AppIconOption.COPPER to "com.nuvio.tv.launcher.AppIconCopper",
-        AppIconOption.GRAPHITE to "com.nuvio.tv.launcher.AppIconGraphite"
+        AppIconOption.GRAPHITE to "com.nuvio.tv.launcher.AppIconGraphite",
+        AppIconOption.HALLOWEEN to "com.nuvio.tv.launcher.AppIconHalloween",
+        AppIconOption.CHRISTMAS to "com.nuvio.tv.launcher.AppIconChristmas",
+        AppIconOption.VALENTINE to "com.nuvio.tv.launcher.AppIconValentine"
     )
+
+    /**
+     * Lumio : logo de la période (Halloween, Noël / Nouvel An, Saint-Valentin), sinon le logo normal.
+     * Appelé quand l'appli passe en arrière-plan, pour ne pas fermer l'écran en cours.
+     * Ne touche pas à un logo de couleur choisi à la main.
+     */
+    fun applySeasonal() {
+        val seasonal = setOf(AppIconOption.ORIGINAL, AppIconOption.HALLOWEEN, AppIconOption.CHRISTMAS, AppIconOption.VALENTINE)
+        val current = currentOption()
+        if (current !in seasonal) return
+        val target = when (com.nuvio.tv.lumio.currentDecoSeason()) {
+            com.nuvio.tv.lumio.LumioDecoSeason.HALLOWEEN -> AppIconOption.HALLOWEEN
+            com.nuvio.tv.lumio.LumioDecoSeason.CHRISTMAS, com.nuvio.tv.lumio.LumioDecoSeason.NEW_YEAR -> AppIconOption.CHRISTMAS
+            com.nuvio.tv.lumio.LumioDecoSeason.VALENTINE -> AppIconOption.VALENTINE
+            else -> AppIconOption.ORIGINAL
+        }
+        if (target == current) return
+        if (activate(target)) _state.value = AppIconSettingsState(selected = target)
+    }
 
     private val _state = MutableStateFlow(AppIconSettingsState())
     val state: StateFlow<AppIconSettingsState> = _state.asStateFlow()

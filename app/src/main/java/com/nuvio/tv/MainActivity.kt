@@ -295,6 +295,9 @@ open class MainActivity : ComponentActivity() {
     lateinit var startupSyncService: StartupSyncService
 
     @Inject
+    lateinit var appIconManager: com.nuvio.tv.launcher.AppIconManager
+
+    @Inject
     lateinit var androidTvChannelSyncService: com.nuvio.tv.core.sync.androidtv.AndroidTvChannelSyncService
 
     @Inject
@@ -1446,6 +1449,10 @@ open class MainActivity : ComponentActivity() {
         // App going to background (e.g. user returning to the launcher): reconcile the
         // Continue Watching channel once so Projectivy repaints it with fresh progress.
         androidTvChannelSyncService.onForegroundChanged(false)
+        // Lumio : logo de la période (Halloween, Noël, Saint-Valentin) changé en arrière-plan
+        if (com.nuvio.tv.lumio.LumioMode.ENABLED && !isChangingConfigurations) {
+            runCatching { appIconManager.applySeasonal() }
+        }
     }
 
     override fun onDestroy() {
