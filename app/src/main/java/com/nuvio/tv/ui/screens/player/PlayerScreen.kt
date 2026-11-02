@@ -2435,15 +2435,18 @@ private fun PlayerControlsOverlay(
                         )
                     }
 
-                    ControlButton(
-                        icon = if (com.nuvio.tv.lumio.LumioMode.ENABLED) Icons.Default.HighQuality else Icons.Default.SwapHoriz,
-                        iconPainter = if (com.nuvio.tv.lumio.LumioMode.ENABLED) null else customSourcePainter,
-                        contentDescription = if (com.nuvio.tv.lumio.LumioMode.ENABLED) "Qualité" else stringResource(R.string.cd_sources),
-                        onClick = onShowSourcesPanel,
-                        upFocusRequester = progressUpTarget,
-                        onDownKey = onHideControls,
-                        onFocused = onResetHideTimer
-                    )
+                    // Lumio : plus de choix de qualité (toujours l'original, la conversion prenait trop de processeur)
+                    if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                        ControlButton(
+                            icon = Icons.Default.SwapHoriz,
+                            iconPainter = customSourcePainter,
+                            contentDescription = stringResource(R.string.cd_sources),
+                            onClick = onShowSourcesPanel,
+                            upFocusRequester = progressUpTarget,
+                            onDownKey = onHideControls,
+                            onFocused = onResetHideTimer
+                        )
+                    }
 
                     ControlButton(
                         icon = Icons.Default.SwapHoriz,

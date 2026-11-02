@@ -36,7 +36,7 @@ class ServerPlayback internal constructor(
                 ServerPlaybackRequest(
                     target,
                     // Lumio : la qualité choisie dans le lecteur s'applique aussi aux vidéos suivantes
-                    com.nuvio.tv.ui.screens.player.LumioQuality.current.let { q -> ServerPlayerCapabilities(allowDirectPlay = q == null, maxBitrate = q) }
+                    ServerPlayerCapabilities(allowDirectPlay = true, maxBitrate = null)
                 )
             ))
         }
