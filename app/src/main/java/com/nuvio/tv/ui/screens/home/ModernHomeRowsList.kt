@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -323,7 +324,7 @@ internal fun ModernHomeRowsList(
                     onFastScrollingChanged = onFastScrollingChanged,
                     shouldHaltForward = {
                         val info = verticalRowListState.layoutInfo
-                        val lastIdx = carouselRows.list.size - 1 + (if (openLumioPlatform != null) 1 else 0)
+                        val lastIdx = carouselRows.list.size - 1
                         val lastVisible = info.visibleItemsInfo.lastOrNull { it.index == lastIdx }
                         lastIdx >= 0 && lastVisible != null &&
                             lastVisible.offset + lastVisible.size <= info.viewportEndOffset
@@ -371,7 +372,13 @@ internal fun ModernHomeRowsList(
                 items = carouselRows.list,
                 key = { index, row -> "${row.key}_$index" },
                 contentType = { _, row -> row.apiType ?: "modern_home_row" }
-            ) { _, row ->
+            ) { rowIndex, row ->
+              // Lumio : rangée « Plateformes » juste sous « Reprendre » (ou tout en haut s'il n'y a rien à reprendre).
+              // Placée dans le même élément que la rangée pour ne pas décaler les index de la liste.
+              val lumioPlatformsAfter = openLumioPlatform != null && row.key == MODERN_CONTINUE_WATCHING_ROW_KEY
+              val lumioPlatformsBefore = openLumioPlatform != null && rowIndex == 0 && row.key != MODERN_CONTINUE_WATCHING_ROW_KEY
+              Column(verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)) {
+                if (lumioPlatformsBefore) com.nuvio.tv.ui.screens.lumio.LumioPlatformsHomeRow(onOpenPlatform = openLumioPlatform!!)
                 val stableOnContinueWatchingOptions = remember(onContinueWatchingOptions) {
                     { item: ContinueWatchingItem -> onContinueWatchingOptions(item) }
                 }
@@ -480,12 +487,8 @@ internal fun ModernHomeRowsList(
                         StableRef(mutableMapOf())
                     }
                 )
-            }
-            // Lumio : rangée « Plateformes » (Netflix, Disney+…) en bas de l'accueil (pas dans les dossiers)
-            if (openLumioPlatform != null) {
-                item(key = "lumio_platforms", contentType = "lumio_platforms") {
-                    com.nuvio.tv.ui.screens.lumio.LumioPlatformsHomeRow(onOpenPlatform = openLumioPlatform)
-                }
+                if (lumioPlatformsAfter) com.nuvio.tv.ui.screens.lumio.LumioPlatformsHomeRow(onOpenPlatform = openLumioPlatform!!)
+              }
             }
         }
     }

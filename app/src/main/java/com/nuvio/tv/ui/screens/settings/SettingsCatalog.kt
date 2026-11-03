@@ -32,7 +32,8 @@ internal fun visibleSettingsCategories(
     // Lumio : paramètres épurés — état des serveurs + mise à jour, thème et personnalisation de l'accueil
     if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
         // + Profils (famille : un profil par personne, chacun avec son compte Jellyfin), géré depuis le profil principal
-        return@filter category == SettingsCategory.LUMIO || category == SettingsCategory.APPEARANCE || category == SettingsCategory.LAYOUT ||
+        // Thème : celui de Nuvio de base (plus de rubrique Apparence)
+        return@filter category == SettingsCategory.LUMIO || category == SettingsCategory.LAYOUT ||
             (category == SettingsCategory.PROFILES && isPrimaryProfile)
     }
     when (category) {

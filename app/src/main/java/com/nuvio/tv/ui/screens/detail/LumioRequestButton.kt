@@ -152,6 +152,10 @@ fun LumioPrimaryButton(
     // Texte, couleur et remplissage de la barre
     val (text, tint, fill) = when {
         // Groupe de secours : Lumio Secour télécharge à la place de Radarr / Sonarr
+        // Lumio Auto (serveur) : recherche sur les indexeurs puis téléchargement, tout en arrière-plan
+        active != null && d != null && d.via == "auto" && d.progress != null ->
+            Triple("Téléchargement ${d.progress} %", Blue, d.progress / 100f)
+        active != null && d != null && d.via == "auto" -> Triple("Recherche d'une version…", Blue, 0.06f)
         active != null && d != null && d.via == "secour" ->
             Triple("Lumio Secour ${d.progress?.let { "$it %" } ?: "…"}" + (if (d.count > 1) " · ${d.count} épisodes" else ""), Green, (d.progress ?: 0) / 100f)
         active != null && d?.state == "downloading" ->
@@ -227,13 +231,18 @@ fun LumioPrimaryButton(
             Text(text, fontWeight = FontWeight.Bold)
         }
         when {
+            d != null && d.via == "auto" && !d.title.isNullOrBlank() -> Text(
+                if (rechecking) "Relance de la recherche…" else d.title.removePrefix("Lumio Auto · ").replaceFirstChar { it.uppercase() } + if (canRecheck) " · OK pour relancer la recherche" else "",
+                color = NuvioTheme.extendedColors.textSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
             d?.state == "warning" -> Text(
-                "${if (state.type == "tv") "Sonarr" else "Radarr"} : ${d.message ?: "intervention manuelle nécessaire"}",
+                "À vérifier : ${d.message ?: "intervention manuelle nécessaire"}",
                 color = Orange,
                 style = MaterialTheme.typography.labelMedium
             )
             active != null && d == null || d?.state == "searching" || d?.state == "partial" -> Text(
-                if (rechecking) "Relance de la recherche…" else "${if (state.type == "tv") "Sonarr" else "Radarr"} cherche une version à télécharger · OK pour relancer la recherche",
+                if (rechecking) "Relance de la recherche…" else "Recherche d'une version à télécharger · OK pour relancer la recherche",
                 color = NuvioTheme.extendedColors.textSecondary,
                 style = MaterialTheme.typography.labelMedium
             )

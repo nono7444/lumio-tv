@@ -38,7 +38,8 @@ class ThemeDataStore @Inject constructor(
     val themeSelection: Flow<ThemeSelection> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             ThemeSelection(
-                theme = prefs[themeKey]?.let { name -> AppTheme.entries.firstOrNull { it.name == name } },
+                // Lumio : toujours le thème de Nuvio de base
+                theme = if (com.nuvio.tv.lumio.LumioMode.ENABLED) null else prefs[themeKey]?.let { name -> AppTheme.entries.firstOrNull { it.name == name } },
                 customColors = CustomThemeColors.decode(prefs[customThemeColorsKey])
             )
         }
@@ -46,7 +47,7 @@ class ThemeDataStore @Inject constructor(
 
     val selectedFont: Flow<AppFont> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
-            val fontName = prefs[fontKey] ?: AppFont.INTER.name
+            val fontName = (if (com.nuvio.tv.lumio.LumioMode.ENABLED) null else prefs[fontKey]) ?: AppFont.INTER.name
             try {
                 AppFont.valueOf(fontName)
             } catch (e: IllegalArgumentException) {
@@ -57,13 +58,13 @@ class ThemeDataStore @Inject constructor(
 
     val amoledMode: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
-            prefs[amoledModeKey] ?: false
+            if (com.nuvio.tv.lumio.LumioMode.ENABLED) false else prefs[amoledModeKey] ?: false
         }
     }
 
     val amoledSurfacesMode: Flow<Boolean> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
-            prefs[amoledSurfacesModeKey] ?: false
+            if (com.nuvio.tv.lumio.LumioMode.ENABLED) false else prefs[amoledSurfacesModeKey] ?: false
         }
     }
 

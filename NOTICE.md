@@ -28,4 +28,8 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026).
 - Accueil sans rond de chargement ni animation d'apparition, affiché dès la première rangée prête (sans attendre les catalogues lents) ; fond décodé hors du fil principal, notes et rang chargés après l'accueil ; « À voir » en affiches plus petites.
 - Icône et bannière de l'appli redessinées pour Lumio, en verre translucide façon iOS 26 (« Lumio TV »), bords arrondis (les logos de saison automatiques ont été retirés : ils faisaient disparaître l'appli de certains lanceurs, dont celui de la box Freebox).
 
+- Thème : celui de NuvioTV de base (plus de choix de thème, de police ni de fond ; plus de décorations, fond ni rangée de saison).
+- Plus d'onglet « Demandes » dans le menu : on demande depuis la fiche, et le serveur Lumio (Lumio Auto) cherche et télécharge en arrière-plan ; la fiche montre la recherche puis le téléchargement. Rien d'administration sur la TV (plus de bouton « DL »).
+- « Plateformes » (Netflix, Disney+…) juste sous « Reprendre » sur l'accueil.
+
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

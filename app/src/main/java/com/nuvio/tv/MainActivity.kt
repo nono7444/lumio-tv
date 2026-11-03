@@ -1083,7 +1083,6 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.Search.route)
                             add(Screen.Library.route)
                             add(Screen.LumioLive.route)
-                            add(Screen.LumioRequests.route)
                             add(Screen.LumioWatchlist.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
@@ -1150,14 +1149,6 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LumioWatchlist.route,
                                     label = "À voir",
                                     icon = Icons.Default.Bookmark
-                                )
-                            )
-                            // Lumio : demandes (statut, téléchargement, validation)
-                            add(
-                                DrawerItem(
-                                    route = Screen.LumioRequests.route,
-                                    label = "Demandes",
-                                    icon = Icons.Default.Inbox
                                 )
                             )
                             add(
@@ -1264,11 +1255,6 @@ open class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            // Lumio : décorations de saison (Halloween, Noël…) sur les écrans principaux, jamais dans le lecteur
-                            com.nuvio.tv.lumio.LumioSeasonalOverlay(
-                                visible = currentRoute == Screen.Home.route,
-                                modifier = Modifier.fillMaxSize()
-                            )
                             // Lumio : mon rang (écusson) en haut à droite de l'accueil
                             com.nuvio.tv.lumio.LumioRankBadge(
                                 visible = currentRoute == Screen.Home.route,
