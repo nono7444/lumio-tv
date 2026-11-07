@@ -36,3 +36,4 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026), mise à jour le 7
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.
 - « Reprendre » synchronisé avec le téléphone : la TV relit les lectures en cours de Jellyfin (toutes les 3 minutes et au changement de profil) et reprend au même endroit ; l'import de la position et des « vu » de Jellyfin est toujours actif.
 - Bibliothèques Jellyfin relues au démarrage puis toutes les 30 minutes : une nouvelle bibliothèque (par exemple « 4K ») apparaît sans réglage.
+- Fréquence d'image calée sur le film (24 i/s, 25, 50…) activée par défaut au début de la lecture, pour éviter les micro-saccades (surtout en 4K).

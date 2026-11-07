@@ -1068,7 +1068,10 @@ class PlayerSettingsDataStore @Inject constructor(
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
-                } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF,
+                } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP
+                    // Lumio : la TV se cale sur la cadence du film (24 i/s…) pour éviter les micro-saccades, surtout en 4K
+                    else if (com.nuvio.tv.lumio.LumioMode.ENABLED && prefs[frameRateMatchingKey] == null) FrameRateMatchingMode.START_STOP
+                    else FrameRateMatchingMode.OFF,
                 resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
                 streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.FIRST_STREAM)
