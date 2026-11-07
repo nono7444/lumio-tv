@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
  * Le téléphone et la TV enregistrent la position dans Jellyfin (même compte par profil). Ici, on relit
  * régulièrement les « en cours » de Jellyfin et on charge leur fiche : ServerUserStateProjection
  * recopie alors la position (si elle est plus récente) dans « Reprendre » de la TV.
+ * Relit aussi la liste des bibliothèques de Jellyfin (au démarrage puis toutes les 30 min) : une bibliothèque
+ * créée sur le serveur (« 4K »…) apparaît toute seule, sans passer par les réglages du serveur cachés dans Lumio.
  */
 @Singleton
 class LumioResumeSync @Inject constructor(
@@ -39,9 +41,24 @@ class LumioResumeSync @Inject constructor(
         }
         scope.launch {
             delay(INITIAL_DELAY_MS)
+            var turn = 0
             while (true) {
+                if (turn % LIBRARY_EVERY == 0) refreshLibraries()
                 syncOnce()
+                turn++
                 delay(INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun refreshLibraries() {
+        for (connection in repository.enabledConnections()) {
+            try {
+                repository.refreshLibraries(connection.id) // nouvelles bibliothèques : affichées d'office
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w(TAG, "Bibliothèques : Jellyfin injoignable", error)
             }
         }
     }
@@ -78,5 +95,6 @@ class LumioResumeSync @Inject constructor(
         const val LIMIT = 12
         const val INITIAL_DELAY_MS = 4_000L
         const val INTERVAL_MS = 3 * 60_000L
+        const val LIBRARY_EVERY = 10 // 10 × 3 min = toutes les 30 min
     }
 }
