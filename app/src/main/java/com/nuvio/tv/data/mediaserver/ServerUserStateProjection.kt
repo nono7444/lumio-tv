@@ -46,7 +46,8 @@ class ServerUserStateProjection @Inject constructor(
     suspend fun apply(details: ServerItemDetails) {
         val meta = details.meta
         val ref = ServerItemRef.parse(meta.id) ?: return
-        val connection = repository.connection(ref.connectionId)?.takeIf { it.importWatchState } ?: return
+        // Lumio : toujours importer la position et les « vu » de Jellyfin (synchronisés avec le téléphone)
+        val connection = repository.connection(ref.connectionId)?.takeIf { it.importWatchState || com.nuvio.tv.lumio.LumioMode.ENABLED } ?: return
         val isSeries = meta.type == ContentType.SERIES
         val profileId = profileManager.activeProfileId.value
 

@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -50,7 +51,19 @@ import com.nuvio.tv.lumio.LumioClient
 import com.nuvio.tv.ui.theme.NuvioTheme
 import org.json.JSONObject
 
-data class LumioPlatform(val id: String, val name: String, val logo: String?)
+/** icon : icône officielle en couleur (carrée) ; color : couleur de la marque (« #E50914 ») */
+data class LumioPlatform(val id: String, val name: String, val logo: String?, val icon: String? = null, val color: String? = null)
+
+private fun JSONObject.toLumioPlatform() = LumioPlatform(
+    optString("id"),
+    optString("name"),
+    optString("logo").takeIf { it.startsWith("http") },
+    optString("icon").takeIf { it.startsWith("http") },
+    optString("color").takeIf { it.startsWith("#") }
+)
+
+private fun brandColor(hex: String?): Color =
+    runCatching { Color(android.graphics.Color.parseColor(hex ?: "#333333")) }.getOrDefault(Color(0xFF333333))
 data class LumioPlatformTitle(val type: String, val tmdbId: Int, val title: String, val year: String?, val date: String?, val poster: String?, val available: Boolean)
 
 private fun JSONObject.titles(key: String): List<LumioPlatformTitle> {
@@ -89,7 +102,7 @@ fun LumioPlatformsScreen(
             .onSuccess { json ->
                 val arr = json.optJSONArray("platforms")
                 platforms = (0 until (arr?.length() ?: 0)).mapNotNull { i ->
-                    arr!!.optJSONObject(i)?.let { LumioPlatform(it.optString("id"), it.optString("name"), it.optString("logo").takeIf { l -> l.startsWith("http") }) }
+                    arr!!.optJSONObject(i)?.toLumioPlatform()
                 }
                 if (selected == null) selected = platforms?.firstOrNull()?.id
             }
@@ -220,42 +233,71 @@ private fun PosterGridRow(row: List<LumioPlatformTitle>, onOpen: (String, Int) -
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun LumioPlatformTile(pf: LumioPlatform, on: Boolean = false, onClick: () -> Unit) {
+    // Comme sur l'iPhone : carte sombre teintée de la couleur de la marque, icône officielle en couleur, nom
+    val tint = brandColor(pf.color)
     Card(
         onClick = onClick,
-        shape = CardDefaults.shape(RoundedCornerShape(18.dp)),
-        colors = CardDefaults.colors(containerColor = Color(0xFF0A0A0B), focusedContainerColor = Color(0xFF0A0A0B)),
-        modifier = Modifier.width(190.dp).height(104.dp)
+        shape = CardDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = CardDefaults.colors(containerColor = Color(0xFF0C0C0E), focusedContainerColor = Color(0xFF0C0C0E)),
+        border = CardDefaults.border(
+            focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Color.White.copy(alpha = 0.9f)), shape = RoundedCornerShape(20.dp))
+        ),
+        scale = CardDefaults.scale(focusedScale = 1.06f),
+        modifier = Modifier.width(236.dp).height(92.dp)
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF232327), Color(0xFF050506))))
+                .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.40f), tint.copy(alpha = 0.10f), Color(0xFF0C0C0E))))
                 .border(
                     width = if (on) 2.dp else 1.dp,
-                    color = if (on) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.16f),
-                    shape = RoundedCornerShape(18.dp)
+                    color = if (on) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(20.dp)
                 )
         ) {
-            // Reflet du verre en haut
+            // Reflet léger en haut
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.55f)
-                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.04f), Color.Transparent)))
+                    .fillMaxHeight(0.45f)
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent)))
             )
-            Box(Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 22.dp), contentAlignment = Alignment.Center) {
-                if (pf.logo != null) {
-                    AsyncImage(
-                        model = pf.logo,
-                        contentDescription = pf.name,
-                        contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.tint(Color.White),
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Text(pf.name, color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                }
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                LumioPlatformIcon(pf, 58)
+                Text(
+                    pf.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+        }
+    }
+}
+
+/** Icône carrée de la plateforme (ou ses initiales sur un serveur trop ancien). */
+@Composable
+fun LumioPlatformIcon(pf: LumioPlatform, size: Int) {
+    val shape = RoundedCornerShape((size * 0.24f).dp)
+    Box(
+        Modifier
+            .width(size.dp)
+            .height(size.dp)
+            .clip(shape)
+            .background(brandColor(pf.color))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), shape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (pf.icon != null) {
+            AsyncImage(model = pf.icon, contentDescription = pf.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        } else {
+            Text(pf.name.filter { it.isLetterOrDigit() || it == '+' }.take(3), color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.32f).sp)
         }
     }
 }
@@ -274,7 +316,7 @@ fun LumioPlatformsHomeRow(onOpenPlatform: (String) -> Unit) {
         runCatching { client.platforms() }.onSuccess { json ->
             val arr = json.optJSONArray("platforms")
             platforms = (0 until (arr?.length() ?: 0)).mapNotNull { i ->
-                arr!!.optJSONObject(i)?.let { LumioPlatform(it.optString("id"), it.optString("name"), it.optString("logo").takeIf { l -> l.startsWith("http") }) }
+                arr!!.optJSONObject(i)?.toLumioPlatform()
             }.also { platformsCache = it }
         }
     }

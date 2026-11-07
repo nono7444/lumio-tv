@@ -50,6 +50,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     @Inject lateinit var imagePerformancePreferences: ImagePerformancePreferences
     @Inject lateinit var simklAnimeIdPreferenceHolder: SimklAnimeIdPreferenceHolder
     @Inject lateinit var serverUserStateProjection: ServerUserStateProjection
+    @Inject lateinit var lumioResumeSync: com.nuvio.tv.lumio.LumioResumeSync
 
     companion object {
         /**
@@ -90,6 +91,8 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         PluginRuntimeHooks.onApplicationCreate(this)
         androidTvChannelSyncService.start()
         serverUserStateProjection.start()
+        // Lumio : « Reprendre » synchronisé avec le téléphone (positions de Jellyfin)
+        lumioResumeSync.start()
         // Lumio : clé TMDB fournie par le serveur Lumio
         com.nuvio.tv.lumio.LumioTmdb.start(this)
         com.nuvio.tv.lumio.LumioRatingBadges.start(this)
