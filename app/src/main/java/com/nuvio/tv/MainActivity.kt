@@ -337,6 +337,8 @@ open class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var serverRepository: com.nuvio.tv.data.mediaserver.ServerRepository
+
+    @Inject
     lateinit var partyRepository: PartyRepository
 
     private val pendingDeepLinkUrl = MutableStateFlow<String?>(null)
