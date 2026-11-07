@@ -1,6 +1,5 @@
 package com.nuvio.tv.ui.screens.player
 
-import com.nuvio.tv.data.repository.SkipInterval
 import android.util.Log
 import com.nuvio.tv.core.player.OpenSubtitlesHasher
 import androidx.media3.common.C
