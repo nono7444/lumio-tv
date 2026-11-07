@@ -63,6 +63,22 @@ jobs:
           cp out/lumio-tv-universal.apk out/lumio-tv.apk
           ls -la out
 
+      - name: Accélération matérielle de l'émulateur
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Ouvre l'appli 60 s sur une Android TV virtuelle : pas de Release si elle plante ou redémarre en boucle
+      - name: Essai sur une Android TV virtuelle
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: android-tv
+          arch: x86
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash .github/smoke-tv.sh
       - if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
