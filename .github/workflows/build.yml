@@ -63,7 +63,8 @@ jobs:
           cp out/lumio-tv-universal.apk out/lumio-tv.apk
           ls -la out
 
-      - uses: softprops/action-gh-release@v2
+      - if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Lumio TV 1.0.${{ github.run_number }}

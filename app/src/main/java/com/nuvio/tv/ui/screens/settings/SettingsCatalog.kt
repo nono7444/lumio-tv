@@ -12,6 +12,7 @@ internal enum class SettingsCategory(val group: SettingsRailGroup) {
     LUMIO(SettingsRailGroup.YOU),
     ACCOUNT(SettingsRailGroup.YOU),
     PROFILES(SettingsRailGroup.YOU),
+    WATCH_PARTY(SettingsRailGroup.YOU),
     APPEARANCE(SettingsRailGroup.LOOK),
     LAYOUT(SettingsRailGroup.LOOK),
     CONTENT_DISCOVERY(SettingsRailGroup.WATCH),
@@ -27,7 +28,8 @@ internal enum class SettingsCategory(val group: SettingsRailGroup) {
 internal fun visibleSettingsCategories(
     isPrimaryProfile: Boolean,
     isEssentialMode: Boolean,
-    isDebugBuild: Boolean
+    isDebugBuild: Boolean,
+    isWatchPartyAvailable: Boolean = false
 ): List<SettingsCategory> = SettingsCategory.entries.filter { category ->
     // Lumio : paramètres épurés — état des serveurs + mise à jour, thème et personnalisation de l'accueil
     if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
@@ -41,6 +43,7 @@ internal fun visibleSettingsCategories(
         // Lumio : pas de compte Nuvio (service en ligne de Nuvio), la connexion se fait au serveur Jellyfin
         SettingsCategory.ACCOUNT -> false
         SettingsCategory.PROFILES -> isPrimaryProfile
+        SettingsCategory.WATCH_PARTY -> isWatchPartyAvailable
         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
         SettingsCategory.EXPERIENCE -> false
         else -> true
