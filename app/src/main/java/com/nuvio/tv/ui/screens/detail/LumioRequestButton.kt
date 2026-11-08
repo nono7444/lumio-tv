@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.nuvio.tv.lumio.LumioRequest
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.nuvio.tv.data.mediaserver.ServerMatcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,12 +118,24 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
         }.getOrNull()?.let { media = it }
     }
     // Suivi en direct pendant le téléchargement (toutes les 5 s), jusqu'à l'arrivée dans Jellyfin
+    // (et toutes les 30 s tant qu'une demande attend la validation de l'admin)
     val activeId = media?.requests?.firstOrNull { it.status == RequestStatus.APPROVED }?.id
-    LaunchedEffect(meta.id, activeId) {
-        if (activeId == null) return@LaunchedEffect
+    val pendingId = media?.requests?.firstOrNull { it.status == RequestStatus.PENDING }?.id
+    LaunchedEffect(meta.id, activeId, pendingId) {
+        if (activeId == null && pendingId == null) return@LaunchedEffect
         while (true) {
-            delay(5_000)
+            delay(if (activeId != null) 5_000 else 30_000)
             reload++
+        }
+    }
+    // Dès que le titre arrive dans Jellyfin : on oublie les recherches en cache pour que « Lire » le trouve tout de suite
+    val nowPlayable = media?.let { it.status == MediaStatus.AVAILABLE || it.status == MediaStatus.PARTIALLY_AVAILABLE } == true
+    var wasWaiting by remember(meta.id) { mutableStateOf(false) }
+    LaunchedEffect(nowPlayable, activeId) {
+        if (activeId != null && !nowPlayable) wasWaiting = true
+        if (nowPlayable && wasWaiting) {
+            ServerMatcher.current?.invalidateAll()
+            wasWaiting = false
         }
     }
     return LumioMediaState(meta, client, media) { reload++ }

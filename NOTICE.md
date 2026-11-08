@@ -31,6 +31,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026), mise à jour le 7
 
 - Thème : celui de NuvioTV de base (plus de choix de thème, de police ni de fond ; plus de décorations, fond ni rangée de saison).
 - Plus d'onglet « Demandes » dans le menu : on demande depuis la fiche, et le serveur Lumio (Lumio Auto) cherche et télécharge en arrière-plan ; la fiche montre la recherche puis le téléchargement. Rien d'administration sur la TV (plus de bouton « DL »).
+- Après « Demander », la fiche suit le téléchargement en direct (pourcentage toutes les 5 s, puis « Ajout dans la bibliothèque… ») et le bouton « Lire » remplace la barre dès que le titre est dans Jellyfin (le cache des recherches de serveur est vidé à ce moment-là).
 - « Plateformes » (Netflix, Disney+…) juste sous « Reprendre » sur l'accueil.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.

@@ -82,6 +82,18 @@ class ServerMatcher internal constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
+    init {
+        current = this
+    }
+
+    /** Lumio : oublie les recherches et index en cache (un titre vient d'arriver dans Jellyfin). */
+    fun invalidateAll() {
+        synchronized(lock) {
+            lookups.clear()
+            indexes.clear()
+        }
+    }
+
     private val indexes = mutableMapOf<String, IndexBuild>()
     private val lookups = object : LinkedHashMap<LookupKey, TitleLookup>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<LookupKey, TitleLookup>): Boolean =
@@ -312,17 +324,21 @@ class ServerMatcher internal constructor(
         var failed = false
     }
 
-    private companion object {
-        const val TAG = "ServerMatcher"
-        const val INDEX_PAGE_SIZE = 500
-        const val INDEX_TTL_MS = 10 * 60_000L
-        const val INDEX_WAIT_MS = 12_000L
-        const val LOOKUP_TTL_MS = 10 * 60_000L
-        const val LOOKUP_WAIT_MS = 6_000L
-        const val LOOKUP_CACHE_SIZE = 300
-        const val CONVERSION_TIMEOUT_MS = 5_000L
-        const val META_WAIT_MS = 3_000L
-        const val TITLE_NAME_CACHE_SIZE = 200
+    companion object {
+        /** Instance unique (Hilt), pour que Lumio puisse vider le cache depuis l'écran de la fiche. */
+        @Volatile
+        var current: ServerMatcher? = null
+
+        private const val TAG = "ServerMatcher"
+        private const val INDEX_PAGE_SIZE = 500
+        private const val INDEX_TTL_MS = 10 * 60_000L
+        private const val INDEX_WAIT_MS = 12_000L
+        private const val LOOKUP_TTL_MS = 10 * 60_000L
+        private const val LOOKUP_WAIT_MS = 6_000L
+        private const val LOOKUP_CACHE_SIZE = 300
+        private const val CONVERSION_TIMEOUT_MS = 5_000L
+        private const val META_WAIT_MS = 3_000L
+        private const val TITLE_NAME_CACHE_SIZE = 200
     }
 }
 
