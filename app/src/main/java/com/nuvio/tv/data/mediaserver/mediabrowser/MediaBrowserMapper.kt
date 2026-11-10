@@ -65,7 +65,8 @@ internal class MediaBrowserMapper(
     fun resumeTitle(item: BaseItem): ServerTitle? {
         val preview = resumePreview(item) ?: return null
         val isEpisode = item.type.equals("Episode", ignoreCase = true)
-        return ServerTitle(preview, if (isEpisode) TrackingExternalIds() else item.externalIds())
+        val stamp = "${item.id}|${item.userData?.playbackPositionTicks ?: 0L}|${item.userData?.lastPlayedDate.orEmpty()}"
+        return ServerTitle(preview, if (isEpisode) TrackingExternalIds() else item.externalIds(), stamp)
     }
 
     private fun resumePreview(item: BaseItem): MetaPreview? {

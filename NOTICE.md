@@ -35,7 +35,7 @@ Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026), mise à jour le 7
 - « Plateformes » (Netflix, Disney+…) juste sous « Reprendre » sur l'accueil.
 
 Le code source complet est disponible dans ce dépôt, conformément à la GPL v3.
-- « Reprendre » synchronisé avec le téléphone : la TV relit les lectures en cours de Jellyfin (toutes les 3 minutes et au changement de profil) et reprend au même endroit ; l'import de la position et des « vu » de Jellyfin est toujours actif.
+- « Reprendre » synchronisé avec le téléphone : la TV relit les lectures en cours de Jellyfin (toutes les minutes et au changement de profil, `LumioResumeSync`) et reprend au même endroit ; un titre terminé ou remis à zéro sur un autre appareil sort de « Reprendre » ; l'import de la position et des « vu » de Jellyfin est toujours actif.
 - Bibliothèques Jellyfin relues au démarrage puis toutes les 30 minutes : une nouvelle bibliothèque (par exemple « 4K ») apparaît sans réglage.
 - Fréquence d'image calée sur le film (24 i/s, 25, 50…) activée par défaut au début de la lecture, pour éviter les micro-saccades (surtout en 4K).
 - Adaptation de la résolution activée par défaut, uniquement vers le haut : un film 4K fait passer la TV en 4K même si la box est réglée en 1080p (`FrameRateUtils`, `PlayerSettingsDataStore`).

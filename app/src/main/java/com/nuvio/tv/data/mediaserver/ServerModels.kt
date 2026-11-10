@@ -124,7 +124,9 @@ data class ServerPage<T>(
 
 data class ServerTitle(
     val preview: MetaPreview,
-    val externalIds: TrackingExternalIds = TrackingExternalIds()
+    val externalIds: TrackingExternalIds = TrackingExternalIds(),
+    /** Lumio : empreinte de l'état de lecture (élément, position, date) ; change dès que la reprise bouge. */
+    val resumeStamp: String? = null
 )
 
 data class ServerItemDetails(
