@@ -321,8 +321,16 @@ object FrameRateUtils {
         resolutionMatchingEnabled: Boolean
     ): DisplayModeSpec? {
         if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
+            // Lumio : la résolution ne fait que monter (box en 1080p + film 4K → TV en 4K) ; un film 1080p
+            // sur une box réglée en 4K ne fait pas redescendre la TV.
+            val activeArea = activeMode.width.toLong() * activeMode.height.toLong()
+            val candidates = if (com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                modes.filter { it.width.toLong() * it.height.toLong() >= activeArea }.ifEmpty { modes }
+            } else {
+                modes
+            }
             val sizeGroups = resolutionCandidateGroups(
-                modes = modes,
+                modes = candidates,
                 videoWidth = videoWidth ?: activeMode.width,
                 videoHeight = videoHeight ?: activeMode.height
             )

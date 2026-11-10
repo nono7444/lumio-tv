@@ -1072,7 +1072,8 @@ class PlayerSettingsDataStore @Inject constructor(
                     // Lumio : la TV se cale sur la cadence du film (24 i/s…) pour éviter les micro-saccades, surtout en 4K
                     else if (com.nuvio.tv.lumio.LumioMode.ENABLED && prefs[frameRateMatchingKey] == null) FrameRateMatchingMode.START_STOP
                     else FrameRateMatchingMode.OFF,
-                resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: false,
+                // Lumio : un film 4K fait passer la TV en 4K, même si la box est réglée en 1080p
+                resolutionMatchingEnabled = prefs[resolutionMatchingEnabledKey] ?: com.nuvio.tv.lumio.LumioMode.ENABLED,
                 streamAutoPlayMode = prefs[streamAutoPlayModeKey]?.let {
                     runCatching { StreamAutoPlayMode.valueOf(it) }.getOrDefault(StreamAutoPlayMode.FIRST_STREAM)
                     // Lumio : la seule source est Jellyfin, on la lance directement
