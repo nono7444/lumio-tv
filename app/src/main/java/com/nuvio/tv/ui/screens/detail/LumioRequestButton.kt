@@ -146,21 +146,26 @@ private val Blue = Color(0xFF3D8BFF)
 private val Green = Color(0xFF30D158)
 private val Orange = Color(0xFFFF9F0A)
 
+/** Le serveur permet-il à ce compte (admin) de lire en streaming un titre absent ? */
+@Composable
+fun rememberLumioWatchNow(state: LumioMediaState): Boolean {
+    var enabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { enabled = state.client.watchNowEnabled() }
+    return enabled && (state.media?.tmdbId ?: state.meta.lumioTmdb()) != null
+}
+
 /**
- * « Regarder » un titre absent du serveur : le serveur Lumio trouve un lien, TorBox (ou AllDebrid) le lit tout de suite,
- * et le titre se télécharge en arrière-plan pour toute la famille. N'apparaît que si le serveur le permet.
+ * « Lire » un titre absent du serveur (admin) : le serveur Lumio trouve un lien, TorBox le lit en streaming,
+ * et le fichier arrive en arrière-plan sur le serveur (torrent C411, ou téléchargement direct si le ratio est bas).
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun LumioWatchNowButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
+fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? = null, onFocused: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var enabled by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { enabled = state.client.watchNowEnabled() }
     val meta = state.meta
-    val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb()
-    if (!enabled || tmdbId == null) return
+    val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb() ?: return
     // Série : premier épisode de la première saison absente du serveur (le reste arrive dans Jellyfin par le téléchargement)
     val season = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
     val episode = if (state.type == "tv") 1 else null
@@ -185,7 +190,7 @@ fun LumioWatchNowButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
                         season = season,
                         episode = episode
                     )
-                    if (w.downloading) android.widget.Toast.makeText(context, "Le titre se télécharge aussi pour toute la famille", android.widget.Toast.LENGTH_LONG).show()
+                    if (w.downloading) android.widget.Toast.makeText(context, "Téléchargement lancé sur le serveur", android.widget.Toast.LENGTH_LONG).show()
                     com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
                     state.reload()
                 }.onFailure {
@@ -195,10 +200,13 @@ fun LumioWatchNowButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
             }
         },
         shape = ButtonDefaults.shape(RoundedCornerShape(50)),
-        modifier = Modifier.onFocusChanged { if (it.isFocused) onFocused() },
+        modifier = Modifier
+            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+            .onFocusChanged { if (it.isFocused) onFocused() }
+            .widthIn(min = 200.dp),
         colors = ButtonDefaults.colors(
-            containerColor = Color(0x33FFFFFF),
-            contentColor = Color.White,
+            containerColor = Color.White,
+            contentColor = Color.Black,
             focusedContainerColor = Color.White,
             focusedContentColor = Color.Black
         )
@@ -207,8 +215,8 @@ fun LumioWatchNowButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
         Text(
             when {
                 busy -> "Recherche d'un lien…"
-                season != null -> "Regarder S${season}E1"
-                else -> "Regarder"
+                season != null -> "Lire S${season}E1"
+                else -> "Lire"
             },
             fontWeight = FontWeight.Bold
         )

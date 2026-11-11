@@ -232,7 +232,7 @@ class LumioClient(private val context: Context) {
     /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
 
-    /** « Regarder maintenant » : le serveur sait-il lire tout de suite un titre absent (TorBox / AllDebrid) ? */
+    /** « Lire » un titre absent : le serveur le permet-il à ce compte (admin, clé TorBox) ? */
     suspend fun watchNowEnabled(): Boolean =
         runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("enabled", false) }.getOrDefault(false)
 
