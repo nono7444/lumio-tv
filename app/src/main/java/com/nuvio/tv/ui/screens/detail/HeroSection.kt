@@ -298,6 +298,8 @@ fun HeroContentSection(
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused
                             )
+                            // Streaming direct (TorBox / AllDebrid) : regarder tout de suite pendant que ça se télécharge
+                            LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
                         } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
                             enabled = isPlayEnabled,

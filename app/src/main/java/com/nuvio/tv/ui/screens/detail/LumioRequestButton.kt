@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.layout.widthIn
@@ -144,6 +145,75 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
 private val Blue = Color(0xFF3D8BFF)
 private val Green = Color(0xFF30D158)
 private val Orange = Color(0xFFFF9F0A)
+
+/**
+ * « Regarder » un titre absent du serveur : le serveur Lumio trouve un lien, TorBox (ou AllDebrid) le lit tout de suite,
+ * et le titre se télécharge en arrière-plan pour toute la famille. N'apparaît que si le serveur le permet.
+ */
+@OptIn(ExperimentalTvMaterial3Api::class)
+@Composable
+fun LumioWatchNowButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var enabled by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { enabled = state.client.watchNowEnabled() }
+    val meta = state.meta
+    val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb()
+    if (!enabled || tmdbId == null) return
+    // Série : premier épisode de la première saison absente du serveur (le reste arrive dans Jellyfin par le téléchargement)
+    val season = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
+    val episode = if (state.type == "tv") 1 else null
+    Button(
+        onClick = {
+            if (!busy) scope.launch {
+                busy = true
+                runCatching {
+                    state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background)
+                }.onSuccess { w ->
+                    val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
+                        streamUrl = w.url,
+                        title = meta.name,
+                        streamName = listOfNotNull("Lumio", w.quality, w.language).joinToString(" · "),
+                        year = meta.releaseInfo?.take(4),
+                        contentId = meta.id,
+                        contentType = meta.apiType,
+                        contentName = meta.name,
+                        poster = meta.poster,
+                        backdrop = meta.background,
+                        logo = meta.logo,
+                        season = season,
+                        episode = episode
+                    )
+                    if (w.downloading) android.widget.Toast.makeText(context, "Le titre se télécharge aussi pour toute la famille", android.widget.Toast.LENGTH_LONG).show()
+                    com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
+                    state.reload()
+                }.onFailure {
+                    android.widget.Toast.makeText(context, it.message ?: "Aucun lien pour l'instant", android.widget.Toast.LENGTH_LONG).show()
+                }
+                busy = false
+            }
+        },
+        shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+        modifier = Modifier.onFocusChanged { if (it.isFocused) onFocused() },
+        colors = ButtonDefaults.colors(
+            containerColor = Color(0x33FFFFFF),
+            contentColor = Color.White,
+            focusedContainerColor = Color.White,
+            focusedContentColor = Color.Black
+        )
+    ) {
+        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+        Text(
+            when {
+                busy -> "Recherche d'un lien…"
+                season != null -> "Regarder S${season}E1"
+                else -> "Regarder"
+            },
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
 
 /**
  * Bouton principal quand le titre n'est pas (encore) sur le serveur : il remplace « Lire ».
