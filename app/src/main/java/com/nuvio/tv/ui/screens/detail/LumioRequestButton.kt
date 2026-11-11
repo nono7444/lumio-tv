@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.layout.widthIn
@@ -145,83 +144,6 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
 private val Blue = Color(0xFF3D8BFF)
 private val Green = Color(0xFF30D158)
 private val Orange = Color(0xFFFF9F0A)
-
-/** Le serveur permet-il à ce compte (admin) de lire en streaming un titre absent ? */
-@Composable
-fun rememberLumioWatchNow(state: LumioMediaState): Boolean {
-    var enabled by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { enabled = state.client.watchNowEnabled() }
-    return enabled && (state.media?.tmdbId ?: state.meta.lumioTmdb()) != null
-}
-
-/**
- * « Lire » un titre absent du serveur (admin) : le serveur Lumio trouve un lien, TorBox le lit en streaming,
- * et le fichier arrive en arrière-plan sur le serveur (torrent C411, ou téléchargement direct si le ratio est bas).
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? = null, onFocused: () -> Unit = {}) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var busy by remember { mutableStateOf(false) }
-    val meta = state.meta
-    val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb() ?: return
-    // Série : premier épisode de la première saison absente du serveur (le reste arrive dans Jellyfin par le téléchargement)
-    val season = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
-    val episode = if (state.type == "tv") 1 else null
-    Button(
-        onClick = {
-            if (!busy) scope.launch {
-                busy = true
-                runCatching {
-                    state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background)
-                }.onSuccess { w ->
-                    val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
-                        streamUrl = w.url,
-                        title = meta.name,
-                        streamName = listOfNotNull("Lumio", w.quality, w.language).joinToString(" · "),
-                        year = meta.releaseInfo?.take(4),
-                        contentId = meta.id,
-                        contentType = meta.apiType,
-                        contentName = meta.name,
-                        poster = meta.poster,
-                        backdrop = meta.background,
-                        logo = meta.logo,
-                        season = season,
-                        episode = episode
-                    )
-                    if (w.downloading) android.widget.Toast.makeText(context, "Téléchargement lancé sur le serveur", android.widget.Toast.LENGTH_LONG).show()
-                    com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
-                    state.reload()
-                }.onFailure {
-                    android.widget.Toast.makeText(context, it.message ?: "Aucun lien pour l'instant", android.widget.Toast.LENGTH_LONG).show()
-                }
-                busy = false
-            }
-        },
-        shape = ButtonDefaults.shape(RoundedCornerShape(50)),
-        modifier = Modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { if (it.isFocused) onFocused() }
-            .widthIn(min = 200.dp),
-        colors = ButtonDefaults.colors(
-            containerColor = Color.White,
-            contentColor = Color.Black,
-            focusedContainerColor = Color.White,
-            focusedContentColor = Color.Black
-        )
-    ) {
-        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-        Text(
-            when {
-                busy -> "Recherche d'un lien…"
-                season != null -> "Lire S${season}E1"
-                else -> "Lire"
-            },
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
 
 /**
  * Bouton principal quand le titre n'est pas (encore) sur le serveur : il remplace « Lire ».

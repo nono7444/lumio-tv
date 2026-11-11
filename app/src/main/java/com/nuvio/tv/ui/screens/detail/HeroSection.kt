@@ -293,12 +293,7 @@ fun HeroContentSection(
                     ) {
                         // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            // Admin avec streaming : le bouton « Lire » reste, en streaming (TorBox) pendant que le fichier arrive ;
-                            // l'état du téléchargement s'affiche à côté dès qu'il y en a un. Membres : « Demander ».
-                            if (rememberLumioWatchNow(lumio)) {
-                                LumioWatchNowButton(state = lumio, focusRequester = playButtonFocusRequester, onFocused = onHeroActionFocused)
-                                if (lumio.active != null || lumio.pending != null) LumioPrimaryButton(state = lumio, onFocused = onHeroActionFocused)
-                            } else LumioPrimaryButton(
+                            LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused

@@ -42,12 +42,6 @@ object RequestStatus {
 }
 
 data class LumioSeason(val number: Int, val status: Int)
-/** « Regarder maintenant » : lien de lecture directe renvoyé par le serveur Lumio. */
-data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean)
-/** Ouvre le lecteur depuis un bouton Lumio (branché par la navigation). */
-object LumioPlayBus {
-    @Volatile var navigate: ((String) -> Unit)? = null
-}
 /** Suivi Radarr / Sonarr d'une demande validée : searching, downloading, importing, warning. */
 /** via = « secour » : Radarr / Sonarr hors service, Lumio Secour télécharge à leur place (title = étape en cours). */
 data class LumioDownload(val state: String, val progress: Int?, val message: String?, val count: Int, val via: String? = null, val title: String? = null)
@@ -154,11 +148,11 @@ class LumioClient(private val context: Context) {
         throw LumioException("Serveur Lumio introuvable (essayé : ${candidates(session.connection.address).joinToString()})")
     }
 
-    private fun http(method: String, url: String, token: String?, body: JSONObject?, readTimeoutMs: Int = 25000): String {
+    private fun http(method: String, url: String, token: String?, body: JSONObject?): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = 8000
-        conn.readTimeout = readTimeoutMs
+        conn.readTimeout = 25000
         conn.setRequestProperty("Accept", "application/json")
         token?.let { conn.setRequestProperty("X-Jellyfin-Token", it) }
         if (body != null) {
@@ -176,9 +170,9 @@ class LumioClient(private val context: Context) {
         return text
     }
 
-    private suspend fun call(method: String, path: String, body: JSONObject? = null, readTimeoutMs: Int = 25000): String = withContext(Dispatchers.IO) {
+    private suspend fun call(method: String, path: String, body: JSONObject? = null): String = withContext(Dispatchers.IO) {
         val session = jellyfin() ?: throw LumioException("Connecte d'abord ton serveur Jellyfin (Paramètres → Serveurs média).")
-        http(method, base(session) + path, session.token, body, readTimeoutMs)
+        http(method, base(session) + path, session.token, body)
     }
 
     /** État public des serveurs (Lumio, Jellyfin, Radarr, Sonarr) : en ligne, disponibilité sur 24 h. */
@@ -231,31 +225,6 @@ class LumioClient(private val context: Context) {
 
     /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
-
-    /** « Lire » un titre absent : le serveur le permet-il à ce compte (admin, clé TorBox) ? */
-    suspend fun watchNowEnabled(): Boolean =
-        runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("enabled", false) }.getOrDefault(false)
-
-    /** Lien de lecture directe d'un titre absent du serveur ; le serveur lance aussi son téléchargement en arrière-plan. */
-    suspend fun watchNow(type: String, tmdbId: Int, season: Int?, episode: Int?, title: String, year: String?, poster: String?, backdrop: String?): LumioWatchNow {
-        val body = JSONObject()
-            .put("type", type)
-            .put("tmdbId", tmdbId)
-            .put("title", title)
-            .put("year", year ?: JSONObject.NULL)
-            .put("poster", poster ?: JSONObject.NULL)
-            .put("backdrop", backdrop ?: JSONObject.NULL)
-        if (season != null) body.put("season", season)
-        if (episode != null) body.put("episode", episode)
-        // La recherche d'un lien peut prendre un moment (sites, puis TorBox)
-        val j = JSONObject(call("POST", "/api/watch/now", body, readTimeoutMs = 95000))
-        return LumioWatchNow(
-            url = j.getString("url"),
-            quality = j.optString("quality").takeIf { it.isNotBlank() && it != "null" },
-            language = j.optString("language").takeIf { it.isNotBlank() && it != "null" },
-            downloading = j.optJSONObject("download")?.optString("state") == "started"
-        )
-    }
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
     suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?): Boolean {
