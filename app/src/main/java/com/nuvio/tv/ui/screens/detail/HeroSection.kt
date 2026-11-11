@@ -298,6 +298,8 @@ fun HeroContentSection(
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused
                             )
+                            // Admin : « Movix » (téléchargement direct, choix du fichier) quand le ratio est bas
+                            LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
                         } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
                             enabled = isPlayEnabled,

@@ -42,6 +42,8 @@ object RequestStatus {
 }
 
 data class LumioSeason(val number: Int, val status: Int)
+/** Un fichier proposé par Lumio Secour (raw : l'objet renvoyé tel quel au serveur quand on le choisit). */
+data class LumioLink(val raw: JSONObject, val quality: String, val language: String, val size: String, val sizeBytes: Long, val hoster: String, val source: String, val cached: Boolean)
 /** Suivi Radarr / Sonarr d'une demande validée : searching, downloading, importing, warning. */
 /** via = « secour » : Radarr / Sonarr hors service, Lumio Secour télécharge à leur place (title = étape en cours). */
 data class LumioDownload(val state: String, val progress: Int?, val message: String?, val count: Int, val via: String? = null, val title: String? = null)
@@ -148,11 +150,11 @@ class LumioClient(private val context: Context) {
         throw LumioException("Serveur Lumio introuvable (essayé : ${candidates(session.connection.address).joinToString()})")
     }
 
-    private fun http(method: String, url: String, token: String?, body: JSONObject?): String {
+    private fun http(method: String, url: String, token: String?, body: JSONObject?, readTimeoutMs: Int = 25000): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = method
         conn.connectTimeout = 8000
-        conn.readTimeout = 25000
+        conn.readTimeout = readTimeoutMs
         conn.setRequestProperty("Accept", "application/json")
         token?.let { conn.setRequestProperty("X-Jellyfin-Token", it) }
         if (body != null) {
@@ -170,9 +172,9 @@ class LumioClient(private val context: Context) {
         return text
     }
 
-    private suspend fun call(method: String, path: String, body: JSONObject? = null): String = withContext(Dispatchers.IO) {
+    private suspend fun call(method: String, path: String, body: JSONObject? = null, readTimeoutMs: Int = 25000): String = withContext(Dispatchers.IO) {
         val session = jellyfin() ?: throw LumioException("Connecte d'abord ton serveur Jellyfin (Paramètres → Serveurs média).")
-        http(method, base(session) + path, session.token, body)
+        http(method, base(session) + path, session.token, body, readTimeoutMs)
     }
 
     /** État public des serveurs (Lumio, Jellyfin, Radarr, Sonarr) : en ligne, disponibilité sur 24 h. */
@@ -227,7 +229,7 @@ class LumioClient(private val context: Context) {
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
-    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?): Boolean {
+    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null): Boolean {
         val body = JSONObject()
             .put("type", type)
             .put("tmdbId", tmdbId)
@@ -235,7 +237,28 @@ class LumioClient(private val context: Context) {
             .put("year", year ?: JSONObject.NULL)
             .put("poster", poster ?: JSONObject.NULL)
         if (seasons != null) body.put("seasons", org.json.JSONArray(seasons))
+        // Fichier choisi à la main (film) : le serveur télécharge celui-là
+        if (pick != null) body.put("pick", pick.raw)
         return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
+    }
+
+    /** Admin, bouton « Movix » : fichiers trouvés pour un film (Movix, Wawacity), les meilleurs d'abord côté serveur. */
+    suspend fun secourLinks(tmdbId: Int): List<LumioLink> {
+        val arr = JSONObject(call("GET", "/api/secour/links?type=movie&tmdbId=$tmdbId", readTimeoutMs = 95000)).optJSONArray("links") ?: return emptyList()
+        return (0 until arr.length()).mapNotNull { i ->
+            val o = arr.optJSONObject(i) ?: return@mapNotNull null
+            fun str(k: String) = o.optString(k).takeIf { it.isNotBlank() && it != "null" }
+            LumioLink(
+                raw = o,
+                quality = str("quality") ?: "?",
+                language = str("language") ?: "",
+                size = str("size") ?: "",
+                sizeBytes = o.optLong("sizeBytes", 0L),
+                hoster = str("hoster") ?: "",
+                source = str("source") ?: "",
+                cached = o.optBoolean("cached", false)
+            )
+        }
     }
 
     /** Admin, « DL » d'une demande bloquée : Lumio Secour la télécharge à la place de Radarr / Sonarr. */

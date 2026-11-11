@@ -5,6 +5,8 @@ Lumio TV est un **fork de [NuvioTV](https://github.com/NuvioMedia/NuvioTV)** (©
 Base : NuvioMedia/NuvioTV, commit `17f410a` (15 octobre 2026), mise à jour le 7 novembre 2026 avec la branche `dev` de NuvioTV (commit `fe5c314`, 6 novembre 2026) : passer l'intro par chapitres et Anime-Skip / AniSkip, mode nuit audio, synchronisation automatique des sous-titres, pastilles du lecteur, « Marquer comme vu » dans Reprendre, réglages HDR, mises à jour silencieuses et nombreuses corrections.
 
 ## Modifications apportées par Lumio
+- Bouton « Movix » (admin) sur une fiche absente du serveur : fenêtre de choix du fichier (film) ou des saisons (série), téléchargement direct par le serveur Lumio. Il remplace l'ancien bouton rond « DL ».
+- Accueil : en haut à droite, le nom du compte et l'écusson de rang sont remplacés par une icône « serveur » avec un point vert (en ligne) ou rouge (injoignable).
 - Mise à jour NuvioTV de novembre 2026 : les choix de Lumio sont gardés (qualité d'origine sans bouton Sources, nom et textes Lumio) ; la « Watch party » de Nuvio reste inactive, ses services en ligne n'étant pas configurés.
 - Nom, icônes, bannières et logos remplacés (Lumio TV). Les marques et logos Nuvio ne sont pas utilisés.
 - Identifiant d'application `lol.wawanono.lumio.tv`, mises à jour depuis les Releases de `nono7444/lumio-tv`.

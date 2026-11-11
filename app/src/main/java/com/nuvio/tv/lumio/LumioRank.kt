@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -183,46 +184,51 @@ object LumioRankStore {
     }
 }
 
-/** Pastille du rang en haut à droite de l'accueil (rien à sélectionner : le menu « Mon rang » ouvre les stats). */
+/**
+ * En haut à droite de l'accueil : une icône « serveur » avec un point vert (serveur Lumio en ligne) ou rouge (injoignable).
+ * Plus de nom ni d'écusson. Flèche du haut depuis l'accueil puis OK : ouvre toujours « Mon rang ».
+ */
 @Composable
 fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier, onOpen: () -> Unit = {}) {
     if (!LumioMode.ENABLED || !visible) return
     val context = LocalContext.current
-    var me by remember { mutableStateOf<LumioRankMember?>(null) }
+    var online by remember { mutableStateOf<Boolean?>(null) }
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         kotlinx.coroutines.delay(1_500) // l'accueil d'abord
-        val board = LumioRankStore.load(LumioClient.get(context)) ?: return@LaunchedEffect
-        me = board.first.firstOrNull { it.id == board.second }
+        while (true) {
+            online = runCatching { LumioClient.get(context).me() }.isSuccess
+            kotlinx.coroutines.delay(60_000)
+        }
     }
-    val m = me ?: return
-    // Seul accès à « Mon rang » (plus d'onglet) : flèche du haut depuis l'accueil, puis OK
+    val up = online ?: return
+    val dot = if (up) Color(0xFF30D158) else Color(0xFFFF453A)
     Box(modifier = modifier, contentAlignment = Alignment.TopEnd) {
-        Row(
+        Box(
             modifier = Modifier
                 .padding(top = 20.dp, end = 32.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(
-                    if (focused) Brush.horizontalGradient(listOf(Color(0x33FFFFFF), Color(0x55FFFFFF)))
-                    else Brush.horizontalGradient(listOf(Color(0x00000000), Color(0xB3000000)))
-                )
+                .background(if (focused) Color(0x55FFFFFF) else Color(0x66000000))
                 .border(if (focused) 2.dp else 0.dp, if (focused) Color.White else Color.Transparent, RoundedCornerShape(18.dp))
                 .onFocusChanged { focused = it.isFocused }
                 .clickable { onOpen() }
-                .padding(start = 18.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(10.dp)
         ) {
-            // Nom du compte : gros, serré, comme un titre ; le rang se lit sur l'écusson
-            Text(
-                m.name,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-0.4).sp,
-                maxLines = 1
+            androidx.tv.material3.Icon(
+                imageVector = androidx.compose.material.icons.Icons.Default.Dns,
+                contentDescription = if (up) "Serveur en ligne" else "Serveur hors ligne",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
             )
-            LumioRankShield(m.tier, 34.dp)
+            // Point d'état, en bas à droite de l'icône
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(11.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(dot)
+                    .border(1.5.dp, Color(0xFF101010), RoundedCornerShape(50))
+            )
         }
     }
 }
