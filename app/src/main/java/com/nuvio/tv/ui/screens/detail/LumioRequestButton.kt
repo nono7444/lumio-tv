@@ -149,9 +149,8 @@ private val Orange = Color(0xFFFF9F0A)
 /** Le serveur permet-il de regarder en streaming un titre absent (clé TorBox) ? */
 @Composable
 fun rememberLumioWatchNow(state: LumioMediaState): Boolean {
-    var enabled by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { enabled = state.client.watchNowEnabled() }
-    return enabled && (state.media?.tmdbId ?: state.meta.lumioTmdb()) != null
+    // Toujours « Lire » sur un titre absent : le serveur lance le streaming s'il le peut, sinon il envoie seulement la demande
+    return (state.media?.tmdbId ?: state.meta.lumioTmdb()) != null
 }
 
 /**
