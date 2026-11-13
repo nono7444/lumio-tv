@@ -961,6 +961,8 @@ internal fun PlayerRuntimeController.currentWatchProgress(
 )
 
 internal fun PlayerRuntimeController.saveWatchProgressInternal(position: Long, duration: Long, syncRemote: Boolean = true) {
+    // Lumio : streaming d'un titre absent → position aussi envoyée au serveur Lumio (reprise sur un autre appareil)
+    com.nuvio.tv.lumio.LumioStreamSession.report(context, currentStreamUrl, position, duration)
     if (contentType.equals("cloud", ignoreCase = true)) {
         saveCloudLibraryProgress(position, duration, completed = false)
         return

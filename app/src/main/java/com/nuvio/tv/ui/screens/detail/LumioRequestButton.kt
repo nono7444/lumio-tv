@@ -176,6 +176,34 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
                 runCatching {
                     state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background)
                 }.onSuccess { w ->
+                    // Commencé sur un autre appareil (téléphone) : la position gardée par le serveur devient celle de la TV,
+                    // le lecteur reprend au même endroit
+                    if (w.positionMs > 0L) runCatching {
+                        dagger.hilt.android.EntryPointAccessors
+                            .fromApplication(context.applicationContext, com.nuvio.tv.lumio.LumioEntryPoint::class.java)
+                            .watchProgressRepository()
+                            .saveProgress(
+                                com.nuvio.tv.domain.model.WatchProgress(
+                                    contentId = meta.id,
+                                    contentType = meta.apiType,
+                                    name = meta.name,
+                                    poster = meta.poster,
+                                    backdrop = meta.background,
+                                    logo = meta.logo,
+                                    videoId = meta.id,
+                                    season = season,
+                                    episode = episode,
+                                    episodeTitle = null,
+                                    position = w.positionMs,
+                                    duration = w.durationMs,
+                                    lastWatched = System.currentTimeMillis(),
+                                    progressPercent = if (w.durationMs <= 0L) 5f else null
+                                ),
+                                syncRemote = false
+                            )
+                    }
+                    com.nuvio.tv.lumio.LumioStreamSession.current =
+                        com.nuvio.tv.lumio.LumioStreamSession.Session(w.url, state.type, tmdbId, season, episode, meta.name)
                     val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
                         streamUrl = w.url,
                         title = meta.name,
@@ -214,9 +242,9 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
         Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
         Text(
             when {
-                busy -> "Recherche…"
-                season != null -> "Regarder S${season}E1"
-                else -> "Regarder"
+                busy -> "Préparation…"
+                season != null -> "Lire S${season}E1"
+                else -> "Lire"
             },
             fontWeight = FontWeight.Bold
         )

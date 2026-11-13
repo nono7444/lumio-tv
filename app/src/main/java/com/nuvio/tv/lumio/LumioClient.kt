@@ -11,6 +11,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -22,6 +23,7 @@ import java.net.URL
 @InstallIn(SingletonComponent::class)
 interface LumioEntryPoint {
     fun serverRepository(): ServerRepository
+    fun watchProgressRepository(): com.nuvio.tv.domain.repository.WatchProgressRepository
 }
 
 /** Valeurs identiques à Seerr. */
@@ -44,7 +46,28 @@ object RequestStatus {
 data class LumioSeason(val number: Int, val status: Int)
 /** Un fichier proposé par Lumio Secour (raw : l'objet renvoyé tel quel au serveur quand on le choisit). */
 /** « Regarder » : lien de lecture directe renvoyé par le serveur Lumio (torrent du site trouvé dans le cache TorBox). */
-data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean)
+data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean, val positionMs: Long = 0L, val durationMs: Long = 0L)
+
+/**
+ * Streaming d'un titre absent en cours sur cette TV : sa position est envoyée au serveur Lumio (toutes les 20 s au plus),
+ * pour reprendre au même endroit sur un autre appareil, puis dans Jellyfin quand le fichier est arrivé.
+ */
+object LumioStreamSession {
+    data class Session(val url: String, val type: String, val tmdbId: Int, val season: Int?, val episode: Int?, val title: String)
+    @Volatile var current: Session? = null
+    @Volatile private var lastSent = 0L
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    fun report(context: Context, streamUrl: String, positionMs: Long, durationMs: Long) {
+        val s = current ?: return
+        if (s.url != streamUrl || positionMs < 5000L) return
+        val now = System.currentTimeMillis()
+        if (now - lastSent < 20_000L) return
+        lastSent = now
+        val app = context.applicationContext
+        scope.launch { runCatching { LumioClient.get(app).watchProgress(s, positionMs, durationMs) } }
+    }
+}
 /** Ouvre le lecteur depuis un bouton Lumio (branché par la navigation). */
 object LumioPlayBus {
     @Volatile var navigate: ((String) -> Unit)? = null
@@ -255,8 +278,23 @@ class LumioClient(private val context: Context) {
             url = j.getString("url"),
             quality = j.optString("quality").takeIf { it.isNotBlank() && it != "null" },
             language = j.optString("language").takeIf { it.isNotBlank() && it != "null" },
-            downloading = j.optJSONObject("download")?.optString("state") == "started"
+            downloading = j.optJSONObject("download")?.optString("state") == "started",
+            positionMs = (j.optDouble("position", 0.0) * 1000).toLong().coerceAtLeast(0L),
+            durationMs = (j.optDouble("duration", 0.0) * 1000).toLong().coerceAtLeast(0L)
         )
+    }
+
+    /** Position d'un streaming en cours, gardée par le serveur Lumio (reprise sur un autre appareil). */
+    suspend fun watchProgress(s: LumioStreamSession.Session, positionMs: Long, durationMs: Long) {
+        val body = JSONObject()
+            .put("type", s.type)
+            .put("tmdbId", s.tmdbId)
+            .put("title", s.title)
+            .put("position", positionMs / 1000.0)
+            .put("duration", durationMs / 1000.0)
+        if (s.season != null) body.put("season", s.season)
+        if (s.episode != null) body.put("episode", s.episode)
+        call("POST", "/api/watch/progress", body)
     }
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
