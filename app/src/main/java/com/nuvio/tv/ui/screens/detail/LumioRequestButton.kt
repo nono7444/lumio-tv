@@ -218,7 +218,8 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
                         season = season,
                         episode = episode
                     )
-                    if (w.downloading) android.widget.Toast.makeText(context, "Téléchargement lancé sur le serveur", android.widget.Toast.LENGTH_LONG).show()
+                    if (w.requested) android.widget.Toast.makeText(context, "Demande envoyée à l'admin", android.widget.Toast.LENGTH_LONG).show()
+                    else if (w.downloading) android.widget.Toast.makeText(context, "Téléchargement lancé sur le serveur", android.widget.Toast.LENGTH_LONG).show()
                     com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
                     state.reload()
                 }.onFailure {

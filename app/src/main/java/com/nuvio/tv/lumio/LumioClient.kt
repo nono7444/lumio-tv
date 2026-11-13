@@ -46,7 +46,7 @@ object RequestStatus {
 data class LumioSeason(val number: Int, val status: Int)
 /** Un fichier proposé par Lumio Secour (raw : l'objet renvoyé tel quel au serveur quand on le choisit). */
 /** « Regarder » : lien de lecture directe renvoyé par le serveur Lumio (torrent du site trouvé dans le cache TorBox). */
-data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean, val positionMs: Long = 0L, val durationMs: Long = 0L)
+data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean, val positionMs: Long = 0L, val durationMs: Long = 0L, val requested: Boolean = false)
 
 /**
  * Streaming d'un titre absent en cours sur cette TV : sa position est envoyée au serveur Lumio (toutes les 20 s au plus),
@@ -280,7 +280,8 @@ class LumioClient(private val context: Context) {
             language = j.optString("language").takeIf { it.isNotBlank() && it != "null" },
             downloading = j.optJSONObject("download")?.optString("state") == "started",
             positionMs = (j.optDouble("position", 0.0) * 1000).toLong().coerceAtLeast(0L),
-            durationMs = (j.optDouble("duration", 0.0) * 1000).toLong().coerceAtLeast(0L)
+            durationMs = (j.optDouble("duration", 0.0) * 1000).toLong().coerceAtLeast(0L),
+            requested = j.optJSONObject("download")?.optString("state") == "pending"
         )
     }
 
