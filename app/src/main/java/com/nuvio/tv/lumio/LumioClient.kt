@@ -43,6 +43,12 @@ object RequestStatus {
 
 data class LumioSeason(val number: Int, val status: Int)
 /** Un fichier proposé par Lumio Secour (raw : l'objet renvoyé tel quel au serveur quand on le choisit). */
+/** « Regarder » : lien de lecture directe renvoyé par le serveur Lumio (torrent du site trouvé dans le cache TorBox). */
+data class LumioWatchNow(val url: String, val quality: String?, val language: String?, val downloading: Boolean)
+/** Ouvre le lecteur depuis un bouton Lumio (branché par la navigation). */
+object LumioPlayBus {
+    @Volatile var navigate: ((String) -> Unit)? = null
+}
 data class LumioLink(val raw: JSONObject, val quality: String, val language: String, val size: String, val sizeBytes: Long, val hoster: String, val source: String, val cached: Boolean)
 /** Suivi Radarr / Sonarr d'une demande validée : searching, downloading, importing, warning. */
 /** via = « secour » : Radarr / Sonarr hors service, Lumio Secour télécharge à leur place (title = étape en cours). */
@@ -227,6 +233,31 @@ class LumioClient(private val context: Context) {
 
     /** Récompenses de la famille : points, rang (tier 0 à 9 = écusson), badges, classement. */
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
+
+    /** « Regarder » un titre absent : le serveur le permet-il (clé TorBox, Lumio Auto) ? */
+    suspend fun watchNowEnabled(): Boolean =
+        runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("enabled", false) }.getOrDefault(false)
+
+    /** Lien de lecture directe d'un titre absent du serveur ; le serveur lance aussi son téléchargement en arrière-plan. */
+    suspend fun watchNow(type: String, tmdbId: Int, season: Int?, episode: Int?, title: String, year: String?, poster: String?, backdrop: String?): LumioWatchNow {
+        val body = JSONObject()
+            .put("type", type)
+            .put("tmdbId", tmdbId)
+            .put("title", title)
+            .put("year", year ?: JSONObject.NULL)
+            .put("poster", poster ?: JSONObject.NULL)
+            .put("backdrop", backdrop ?: JSONObject.NULL)
+        if (season != null) body.put("season", season)
+        if (episode != null) body.put("episode", episode)
+        // La recherche peut prendre un moment (site, puis cache TorBox)
+        val j = JSONObject(call("POST", "/api/watch/now", body, readTimeoutMs = 95000))
+        return LumioWatchNow(
+            url = j.getString("url"),
+            quality = j.optString("quality").takeIf { it.isNotBlank() && it != "null" },
+            language = j.optString("language").takeIf { it.isNotBlank() && it != "null" },
+            downloading = j.optJSONObject("download")?.optString("state") == "started"
+        )
+    }
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
     suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null): Boolean {

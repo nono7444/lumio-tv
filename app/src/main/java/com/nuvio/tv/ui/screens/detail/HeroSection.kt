@@ -293,13 +293,16 @@ fun HeroContentSection(
                     ) {
                         // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            LumioPrimaryButton(
+                            // Titre absent : « Regarder » en streaming quand le serveur le permet (cache TorBox), le fichier
+                            // arrive en arrière-plan ; « Demander » (ou l'état du téléchargement) reste à côté.
+                            if (rememberLumioWatchNow(lumio)) {
+                                LumioWatchNowButton(state = lumio, focusRequester = playButtonFocusRequester, onFocused = onHeroActionFocused)
+                                LumioPrimaryButton(state = lumio, onFocused = onHeroActionFocused)
+                            } else LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused
                             )
-                            // Admin : « Movix » (téléchargement direct, choix du fichier) quand le ratio est bas
-                            LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
                         } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
                             enabled = isPlayEnabled,

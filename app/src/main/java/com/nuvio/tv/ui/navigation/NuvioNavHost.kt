@@ -86,6 +86,11 @@ private fun PlaybackNavHost(
     hideBuiltInHeaders: Boolean
 ) {
     val playbackAvailability = LocalPlaybackAvailability.current
+    // Lumio : « Regarder maintenant » ouvre le lecteur avec un lien direct
+    androidx.compose.runtime.DisposableEffect(navController) {
+        com.nuvio.tv.lumio.LumioPlayBus.navigate = { route -> navController.navigate(route) }
+        onDispose { com.nuvio.tv.lumio.LumioPlayBus.navigate = null }
+    }
     val context = LocalContext.current
     fun isStreamToPlayer(from: String, to: String): Boolean {
         return from.startsWith("stream/") && to.startsWith("player/")
