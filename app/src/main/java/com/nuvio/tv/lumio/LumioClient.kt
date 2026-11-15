@@ -259,12 +259,13 @@ class LumioClient(private val context: Context) {
 
     /** « Regarder » un titre absent : le serveur le permet-il (clé TorBox, Lumio Auto) ? */
     suspend fun watchNowEnabled(): Boolean =
-        runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("enabled", false) }.getOrDefault(false)
+        runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("streaming", false) }.getOrDefault(false)
 
     /** Lien de lecture directe d'un titre absent du serveur ; le serveur lance aussi son téléchargement en arrière-plan. */
-    suspend fun watchNow(type: String, tmdbId: Int, season: Int?, episode: Int?, title: String, year: String?, poster: String?, backdrop: String?): LumioWatchNow {
+    suspend fun watchNow(type: String, tmdbId: Int, season: Int?, episode: Int?, title: String, year: String?, poster: String?, backdrop: String?, quality: Int? = null): LumioWatchNow {
         val body = JSONObject()
             .put("type", type)
+            .put("quality", quality ?: JSONObject.NULL)
             .put("tmdbId", tmdbId)
             .put("title", title)
             .put("year", year ?: JSONObject.NULL)

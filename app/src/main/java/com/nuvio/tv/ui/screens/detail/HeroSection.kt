@@ -293,11 +293,8 @@ fun HeroContentSection(
                     ) {
                         // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            // Titre absent : un seul bouton « Lire », en streaming (cache TorBox) pendant que le fichier arrive sur
-                            // le serveur. Aucun autre bouton à côté (ni « Demander », ni état du téléchargement).
-                            if (rememberLumioWatchNow(lumio)) {
-                                LumioWatchNowButton(state = lumio, focusRequester = playButtonFocusRequester, onFocused = onHeroActionFocused)
-                            } else LumioPrimaryButton(
+                            // Titre absent : « Demander » (puis l'état du téléchargement) ; « Lire » ne sert qu'à Jellyfin
+                            LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused
@@ -315,19 +312,12 @@ fun HeroContentSection(
                             }
                         )
 
-                        // Lumio : « Note » (notes de la famille) à la place de « Ajouter à ma liste » (la bibliothèque, c'est Jellyfin)
-                        val lumioTmdb = lumio.media?.tmdbId
-                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumioTmdb != null) {
-                            ActionIconButton(
-                                icon = if (lumioRated) Icons.Default.Star else Icons.Default.StarBorder,
-                                contentDescription = "Noter",
-                                onClick = { showRating = true },
-                                selected = lumioRated,
-                                selectedContainerColor = Color(0xFFFFC93C),
-                                selectedContentColor = Color.Black,
-                                onFocused = onHeroActionFocused
-                            )
-                        } else if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
+                        // Lumio, admin : « Streaming » (choix de la qualité), que le titre soit sur Jellyfin ou non
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && rememberLumioWatchNow(lumio)) {
+                            LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
+                        }
+                        // Notes de la famille retirées ; hors Lumio : « Ajouter à ma liste »
+                        if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
                             ActionIconButton(
                                 icon = if (isInLibrary) Icons.Default.Check else null,
                                 painter = if (!isInLibrary) {
