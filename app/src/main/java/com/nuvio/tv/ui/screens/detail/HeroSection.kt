@@ -316,6 +316,8 @@ fun HeroContentSection(
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && rememberLumioWatchNow(lumio)) {
                             LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
                         }
+                        // Lumio, admin : « DL » (fichier Wawacity, téléchargement direct) sur un titre absent
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED) LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
                         // Notes de la famille retirées ; hors Lumio : « Ajouter à ma liste »
                         if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
                             ActionIconButton(

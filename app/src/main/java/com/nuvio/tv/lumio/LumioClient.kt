@@ -310,7 +310,7 @@ class LumioClient(private val context: Context) {
     }
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
-    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null): Boolean {
+    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null, source: String? = null): Boolean {
         val body = JSONObject()
             .put("type", type)
             .put("tmdbId", tmdbId)
@@ -320,6 +320,8 @@ class LumioClient(private val context: Context) {
         if (seasons != null) body.put("seasons", org.json.JSONArray(seasons))
         // Fichier choisi à la main (film) : le serveur télécharge celui-là
         if (pick != null) body.put("pick", pick.raw)
+        // Source imposée (bouton « DL » : Wawacity)
+        if (source != null) body.put("source", source)
         return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
     }
 
