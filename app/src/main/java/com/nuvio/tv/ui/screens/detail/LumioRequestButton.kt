@@ -207,7 +207,7 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
                 val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
                     streamUrl = w.url,
                     title = meta.name,
-                    streamName = listOfNotNull("Streaming", w.quality, w.language).joinToString(" · "),
+                    streamName = listOfNotNull("Streaming", w.origin, w.quality, w.language).joinToString(" · "),
                     year = meta.releaseInfo?.take(4),
                     contentId = meta.id,
                     contentType = meta.apiType,
@@ -218,7 +218,7 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
                     season = season,
                     episode = episode
                 )
-                if (w.downloading) android.widget.Toast.makeText(context, "Téléchargement lancé sur le serveur", android.widget.Toast.LENGTH_LONG).show()
+                android.widget.Toast.makeText(context, "Streaming depuis ${w.origin}${if (w.downloading) " · téléchargement lancé sur le serveur" else ""}", android.widget.Toast.LENGTH_LONG).show()
                 com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
                 state.reload()
             }.onFailure {
