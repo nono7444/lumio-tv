@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.heightIn
@@ -166,6 +167,14 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
+    // Pastille : vert = au moins un service de streaming marche, rouge = aucun (revérifié chaque minute)
+    var ok by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            ok = state.client.watchNowHealth()
+            delay(60_000)
+        }
+    }
     val meta = state.meta
     val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb() ?: return
     // Série : premier épisode de la première saison absente du serveur (sinon S1E1)
@@ -231,10 +240,10 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
         val first = remember { FocusRequester() }
         NuvioDialog(onDismiss = { menu = false }, title = "Streaming", subtitle = "${meta.name} · choisis la qualité", width = 560.dp) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(2160 to "4K", 1080 to "1080p", 720 to "720p").forEachIndexed { i, (q, label) ->
+                listOf(1080 to "1080p", 720 to "720p").forEachIndexed { i, (q, label) ->
                     Button(
                         onClick = { menu = false; start(q) },
-                        modifier = Modifier.fillMaxWidth().then(if (i == 1) Modifier.focusRequester(first) else Modifier)
+                        modifier = Modifier.fillMaxWidth().then(if (i == 0) Modifier.focusRequester(first) else Modifier)
                     ) { Text(label, fontWeight = FontWeight.Bold) }
                 }
             }
@@ -256,6 +265,15 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
         )
     ) {
         Icon(imageVector = Icons.Default.Cloud, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+        ok?.let { up ->
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .padding(end = 8.dp)
+                    .size(10.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .drawBehind { drawRect(if (up) Color(0xFF30D158) else Color(0xFFFF453A)) }
+            )
+        }
         Text(if (busy) "Recherche…" else "Streaming", fontWeight = FontWeight.Bold)
     }
 }

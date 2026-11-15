@@ -258,6 +258,10 @@ class LumioClient(private val context: Context) {
     suspend fun rewards(): JSONObject = JSONObject(call("GET", "/api/rewards"))
 
     /** « Regarder » un titre absent : le serveur le permet-il (clé TorBox, Lumio Auto) ? */
+    /** État des services de streaming : true = au moins un marche, false = aucun, null = pas encore vérifié. */
+    suspend fun watchNowHealth(): Boolean? =
+        runCatching { JSONObject(call("GET", "/api/watch/now")).optJSONObject("health")?.let { if (it.has("ok")) it.optBoolean("ok") else null } }.getOrNull()
+
     suspend fun watchNowEnabled(): Boolean =
         runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("streaming", false) }.getOrDefault(false)
 
