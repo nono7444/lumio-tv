@@ -50,8 +50,7 @@ import kotlinx.coroutines.launch
 fun LumioSecourButton(state: LumioMediaState, onFocused: () -> Unit = {}) {
     if (!LumioMode.ENABLED) return
     val media = state.media ?: return
-    // « DL » seulement si le titre n'est pas (entièrement) disponible sur le serveur
-    if (media.status == com.nuvio.tv.lumio.MediaStatus.AVAILABLE) return
+    // « DL » affiché tout le temps (même si le titre est déjà sur le serveur) : utile pour une autre qualité
     val tmdbId = media.tmdbId ?: return
     var admin by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { admin = runCatching { state.client.me().admin }.getOrDefault(false) }
@@ -87,10 +86,14 @@ private fun LumioSecourDialog(state: LumioMediaState, tmdbId: Int, onDismiss: ()
     val isTv = state.type == "tv"
     val seasons = remember(meta.id) { meta.videos.mapNotNull { it.season }.filter { it > 0 }.distinct().sorted() }
     var busy by remember { mutableStateOf(false) }
+    // Qualité choisie d'abord (2160 = 4K, 1080)
+    var quality by remember { mutableStateOf<Int?>(null) }
+    fun matches(q: String) = when (quality) { 2160 -> Regex("2160|4k|uhd", RegexOption.IGNORE_CASE).containsMatchIn(q); 1080 -> q.contains("1080"); else -> true }
     // Film : liste des fichiers trouvés (null = recherche en cours)
     var links by remember { mutableStateOf<List<LumioLink>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val first = remember { FocusRequester() }
+    LaunchedEffect(quality) { delay(150); runCatching { first.requestFocus() } }
     LaunchedEffect(Unit) {
         if (!isTv) {
             runCatching { state.client.secourLinks(tmdbId) }
@@ -114,7 +117,8 @@ private fun LumioSecourDialog(state: LumioMediaState, tmdbId: Int, onDismiss: ()
                     poster = meta.poster,
                     seasons = chosen,
                     pick = pick,
-                    source = "wawacity"
+                    source = "wawacity",
+                    quality = quality
                 )
                 if (already) "« ${meta.name} » est déjà en cours de téléchargement."
                 else "« ${meta.name} » part en téléchargement direct. Suivi dans Demandes."
@@ -131,15 +135,23 @@ private fun LumioSecourDialog(state: LumioMediaState, tmdbId: Int, onDismiss: ()
         onDismiss = onDismiss,
         title = "DL · Wawacity",
         subtitle = when {
+            quality == null -> "${meta.name} · choisis la qualité"
             isTv -> "${meta.name} · choisis les saisons (meilleur fichier de chaque épisode)"
             links == null -> "${meta.name} · recherche des fichiers…"
-            links!!.isEmpty() -> "${meta.name} · ${error ?: "aucun fichier trouvé"}"
-            else -> "${meta.name} · ${links!!.size} fichier(s) : choisis celui à télécharger"
+            links!!.none { matches(it.quality) } -> "${meta.name} · ${error ?: "aucun fichier dans cette qualité"}"
+            else -> "${meta.name} · ${links!!.count { matches(it.quality) }} fichier(s) : choisis celui à télécharger"
         },
         width = 720.dp
     ) {
         LazyColumn(modifier = Modifier.heightIn(max = 380.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (isTv) {
+            if (quality == null) {
+                items(listOf(2160 to "4K", 1080 to "1080p").withIndex().toList()) { (i, q) ->
+                    Button(
+                        onClick = { quality = q.first },
+                        modifier = Modifier.fillMaxWidth().then(if (i == 0) Modifier.focusRequester(first) else Modifier)
+                    ) { Text(q.second, fontWeight = FontWeight.Bold) }
+                }
+            } else if (isTv) {
                 val options: List<Pair<String, List<Int>?>> =
                     if (seasons.isNotEmpty()) listOf("Toutes les saisons (${seasons.size})" to seasons) + seasons.map { "Saison $it" to listOf(it) }
                     else listOf("Télécharger la série" to null)
@@ -156,9 +168,9 @@ private fun LumioSecourDialog(state: LumioMediaState, tmdbId: Int, onDismiss: ()
                         onClick = { grab(null) },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth().focusRequester(first)
-                    ) { Text(if (busy) "Envoi…" else "Automatique : le meilleur fichier") }
+                    ) { Text(if (busy) "Envoi…" else "Automatique : le meilleur fichier ${if (quality == 2160) "4K" else "1080p"}") }
                 }
-                items(links ?: emptyList()) { l ->
+                items((links ?: emptyList()).filter { matches(it.quality) }) { l ->
                     Button(onClick = { grab(null, l) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                         Text(
                             listOf(l.quality, l.language, l.size, l.hoster, l.source, if (l.cached) "prêt" else "").filter { it.isNotBlank() }.joinToString(" · "),

@@ -262,6 +262,22 @@ class LumioClient(private val context: Context) {
     suspend fun watchNowHealth(): Boolean? =
         runCatching { JSONObject(call("GET", "/api/watch/now")).optJSONObject("health")?.let { if (it.has("ok")) it.optBoolean("ok") else null } }.getOrNull()
 
+    /** Menu « Streaming » : d'où le flux peut venir, par qualité (1080 / 720) → texte court, ex. « TorBox · AllDebrid (serveur) ». */
+    suspend fun watchProbe(type: String, tmdbId: Int, season: Int?, episode: Int?): Map<Int, String> {
+        val body = JSONObject().put("type", type).put("tmdbId", tmdbId)
+        if (season != null) body.put("season", season)
+        if (episode != null) body.put("episode", episode)
+        val j = JSONObject(call("POST", "/api/watch/probe", body, readTimeoutMs = 120000))
+        return listOf(1080, 720).associateWith { q ->
+            val o = j.optJSONObject(q.toString())
+            if (o == null) "?" else listOfNotNull(
+                if (o.optBoolean("torbox")) "TorBox" else null,
+                if (o.optBoolean("alldebrid")) "AllDebrid (serveur)" else null,
+                if (o.optBoolean("wawacity")) "Wawacity (serveur)" else null
+            ).joinToString(" · ").ifBlank { "rien trouvé" }
+        }
+    }
+
     suspend fun watchNowEnabled(): Boolean =
         runCatching { JSONObject(call("GET", "/api/watch/now")).optBoolean("streaming", false) }.getOrDefault(false)
 
@@ -310,7 +326,7 @@ class LumioClient(private val context: Context) {
     }
 
     /** Admin, bouton « DL » : téléchargement direct par Lumio Secour (meilleur fichier, AllDebrid, disques). */
-    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null, source: String? = null): Boolean {
+    suspend fun secourGrab(type: String, tmdbId: Int, title: String, year: String?, poster: String?, seasons: List<Int>?, pick: LumioLink? = null, source: String? = null, quality: Int? = null): Boolean {
         val body = JSONObject()
             .put("type", type)
             .put("tmdbId", tmdbId)
@@ -322,6 +338,7 @@ class LumioClient(private val context: Context) {
         if (pick != null) body.put("pick", pick.raw)
         // Source imposée (bouton « DL » : Wawacity)
         if (source != null) body.put("source", source)
+        if (quality != null) body.put("quality", quality)
         return JSONObject(call("POST", "/api/secour/grab", body)).optBoolean("already", false)
     }
 
