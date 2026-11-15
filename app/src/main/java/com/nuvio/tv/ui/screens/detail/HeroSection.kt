@@ -312,8 +312,9 @@ fun HeroContentSection(
                             }
                         )
 
-                        // Lumio, admin : « Streaming » (choix de la qualité), que le titre soit sur Jellyfin ou non
-                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && rememberLumioWatchNow(lumio)) {
+                        // Lumio : « Streaming » (choix de la qualité) sur un titre absent du serveur
+                        // Seulement si le fichier n'est pas déjà sur le serveur (sinon « Lire » suffit)
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable && rememberLumioWatchNow(lumio)) {
                             LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
                         }
                         // Lumio, admin : « DL » (fichier Wawacity, téléchargement direct) sur un titre absent
