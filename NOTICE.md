@@ -48,3 +48,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Menu « Streaming » d'une série : choix de la saison et de l'épisode.
 - Titre absent : un seul bouton « Lire » (streaming par le cache TorBox / AllDebrid, et le titre est demandé en même temps) ; plus de bouton Streaming sur un titre déjà sur le serveur.
 - Nouvel onglet « Calendrier » : radar des sorties VOD d'amtVOD (disponible, sortie confirmée, au cinéma), lu par le serveur Lumio.
+- Fréquence d'images : pas de changement de mode qui ferait passer un film 4K en 1080p (box qui n'annonce que ses modes 1080p) ni de mode « à peu près » (50 Hz pour du 23,976 i/s).

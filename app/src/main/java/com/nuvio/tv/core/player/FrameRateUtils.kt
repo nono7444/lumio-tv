@@ -270,7 +270,8 @@ object FrameRateUtils {
             pickBestForTarget(modes, target)
                 ?.takeIf { refreshError(it.refreshRate, target) <= pulldownError + REFRESH_ERROR_SLACK }
         }
-        val modeFallback = modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
+        // Lumio : pas de mode « à peu près » (50 Hz pour un film à 23,976 i/s saccade) : sans fréquence qui colle, on reste tel quel
+        val modeFallback = if (com.nuvio.tv.lumio.LumioMode.ENABLED) null else modes.minByOrNull { refreshWeight(it.refreshRate, frameRate) }
         return modeExact ?: modeDouble ?: modeMultiple ?: modePulldown ?: modeFallback ?: activeMode
     }
 
@@ -320,6 +321,11 @@ object FrameRateUtils {
         videoHeight: Int?,
         resolutionMatchingEnabled: Boolean
     ): DisplayModeSpec? {
+        // Lumio : film 4K mais la box n'annonce aucun mode 4K à Android (box réglée en 4K qui ne montre que ses modes 1080p,
+        // comme la Freebox) : changer de mode ferait descendre la sortie HDMI en 1080p. On ne touche à rien.
+        if (com.nuvio.tv.lumio.LumioMode.ENABLED && (videoWidth ?: 0) >= 3000 && modes.none { maxOf(it.width, it.height) >= 3800 }) {
+            return null
+        }
         if (resolutionMatchingEnabled && hasValidVideoSize(videoWidth, videoHeight)) {
             // Lumio : la résolution ne fait que monter (box en 1080p + film 4K → TV en 4K) ; un film 1080p
             // sur une box réglée en 4K ne fait pas redescendre la TV.
