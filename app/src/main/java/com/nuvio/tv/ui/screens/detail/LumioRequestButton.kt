@@ -178,8 +178,18 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
     val meta = state.meta
     val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb() ?: return
     // Série : premier épisode de la première saison absente du serveur (sinon S1E1)
-    val season = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
-    val episode = if (state.type == "tv") 1 else null
+    val defSeason = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
+    // Série : saison et épisode choisis dans le menu « Streaming »
+    val episodesBySeason = remember(meta.id) {
+        meta.videos.filter { (it.season ?: 0) > 0 && it.episode != null }
+            .groupBy { it.season!! }
+            .mapValues { (_, v) -> v.mapNotNull { it.episode }.distinct().sorted() }
+            .toSortedMap()
+    }
+    var selSeason by remember(meta.id) { mutableStateOf(defSeason ?: 1) }
+    var selEpisode by remember(meta.id) { mutableStateOf(1) }
+    val season = if (state.type == "tv") selSeason else null
+    val episode = if (state.type == "tv") selEpisode else null
     fun start(quality: Int) {
         if (busy) return
         scope.launch {
@@ -238,14 +248,39 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
     }
     // Sources disponibles par qualité : cherchées dès l'affichage du bouton (le serveur prépare aussi les liens LooStream),
     // pour que le menu et la lecture soient immédiats
-    var sources by remember(tmdbId, season) { mutableStateOf<Map<Int, String>?>(null) }
-    LaunchedEffect(tmdbId, season) {
+    var sources by remember(tmdbId, season, episode) { mutableStateOf<Map<Int, String>?>(null) }
+    LaunchedEffect(tmdbId, season, episode) {
         sources = runCatching { state.client.watchProbe(state.type, tmdbId, season, episode) }.getOrElse { emptyMap() }
     }
     if (menu) {
         val first = remember { FocusRequester() }
-        NuvioDialog(onDismiss = { menu = false }, title = "Streaming", subtitle = "${meta.name} · choisis la qualité", width = 560.dp) {
+        NuvioDialog(onDismiss = { menu = false }, title = "Streaming", subtitle = if (state.type == "tv") "${meta.name} · S${season}E${episode} · choisis la qualité" else "${meta.name} · choisis la qualité", width = 640.dp) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (state.type == "tv" && episodesBySeason.isNotEmpty()) {
+                    // Saison, puis épisode
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(episodesBySeason.keys.toList()) { n ->
+                            Button(
+                                onClick = { selSeason = n; selEpisode = episodesBySeason[n]?.firstOrNull() ?: 1 },
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (n == selSeason) Color.White else Color.White.copy(alpha = 0.12f),
+                                    contentColor = if (n == selSeason) Color.Black else Color.White
+                                )
+                            ) { Text("Saison $n", fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(episodesBySeason[selSeason].orEmpty()) { n ->
+                            Button(
+                                onClick = { selEpisode = n },
+                                colors = ButtonDefaults.colors(
+                                    containerColor = if (n == selEpisode) Color.White else Color.White.copy(alpha = 0.12f),
+                                    contentColor = if (n == selEpisode) Color.Black else Color.White
+                                )
+                            ) { Text("É$n", fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                }
                 listOf(1080 to "1080p", 720 to "720p").forEachIndexed { i, (q, label) ->
                     Button(
                         onClick = { menu = false; start(q) },

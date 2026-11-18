@@ -45,3 +45,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Streaming : LooStream (intégré au serveur Lumio) en priorité, puis les caches ; sources cherchées dès l'affichage de la fiche pour un menu et une lecture immédiats ; origine affichée (« LooStream · site »).
 - « Streaming » aussi sur un titre déjà sur le serveur ; le streaming n'envoie plus de demande (c'est le rôle de « Demander »). Recherche tolérante aux fautes d'orthographe (faite par le serveur Lumio).
 - « Streaming » sur toutes les fiches, y compris celles ouvertes depuis la bibliothèque Jellyfin.
+- Menu « Streaming » d'une série : choix de la saison et de l'épisode.
