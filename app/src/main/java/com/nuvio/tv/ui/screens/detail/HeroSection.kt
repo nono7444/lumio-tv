@@ -313,7 +313,7 @@ fun HeroContentSection(
                         )
 
                         // Lumio : « Streaming » (choix de la qualité), aussi sur un titre déjà sur le serveur, à côté de « Lire »
-                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && rememberLumioWatchNow(lumio)) {
+                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && rememberLumioWatchNow(lumio)) {
                             LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
                         }
                         // Lumio, admin : « DL » (fichier Wawacity, téléchargement direct) sur un titre absent
