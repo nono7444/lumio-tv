@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
@@ -1099,6 +1100,7 @@ open class MainActivity : ComponentActivity() {
                             add(Screen.Library.route)
                             add(Screen.LumioLive.route)
                             add(Screen.LumioWatchlist.route)
+                            add(Screen.LumioCalendar.route)
                             add(Screen.Settings.route)
                             if (discoverLocation == DiscoverLocation.IN_SIDEBAR) {
                                 add(Screen.Discover.route)
@@ -1164,6 +1166,14 @@ open class MainActivity : ComponentActivity() {
                                     route = Screen.LumioWatchlist.route,
                                     label = "À voir",
                                     icon = Icons.Default.Bookmark
+                                )
+                            )
+                            // Lumio : calendrier des sorties VOD (radar amtVOD)
+                            add(
+                                DrawerItem(
+                                    route = Screen.LumioCalendar.route,
+                                    label = "Calendrier",
+                                    icon = Icons.Default.DateRange
                                 )
                             )
                             add(

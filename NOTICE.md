@@ -46,3 +46,5 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - « Streaming » aussi sur un titre déjà sur le serveur ; le streaming n'envoie plus de demande (c'est le rôle de « Demander »). Recherche tolérante aux fautes d'orthographe (faite par le serveur Lumio).
 - « Streaming » sur toutes les fiches, y compris celles ouvertes depuis la bibliothèque Jellyfin.
 - Menu « Streaming » d'une série : choix de la saison et de l'épisode.
+- Titre absent : un seul bouton « Lire » (streaming par le cache TorBox / AllDebrid, et le titre est demandé en même temps) ; plus de bouton Streaming sur un titre déjà sur le serveur.
+- Nouvel onglet « Calendrier » : radar des sorties VOD d'amtVOD (disponible, sortie confirmée, au cinéma), lu par le serveur Lumio.

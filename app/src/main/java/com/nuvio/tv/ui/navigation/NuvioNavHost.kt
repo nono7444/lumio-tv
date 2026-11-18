@@ -1253,6 +1253,22 @@ private fun PlaybackNavHost(
             )
         }
 
+        // Lumio : calendrier des sorties VOD (radar amtVOD, comme sur le téléphone)
+        composable(Screen.LumioCalendar.route) {
+            com.nuvio.tv.ui.screens.lumio.LumioCalendarScreen(
+                showBuiltInHeader = !hideBuiltInHeaders,
+                onOpen = { item ->
+                    navController.navigate(
+                        Screen.Detail.createRoute(
+                            "tmdb:${item.tmdbId}",
+                            if (item.type == "tv") "series" else "movie",
+                            com.nuvio.tv.lumio.LumioTmdbSearch.BASE_URL
+                        )
+                    )
+                }
+            )
+        }
+
         composable(Screen.LumioWatchlist.route) {
             com.nuvio.tv.ui.screens.lumio.LumioWatchlistScreen(
                 showBuiltInHeader = !hideBuiltInHeaders,

@@ -158,6 +158,7 @@ sealed class Screen(val route: String) {
     data object LumioRequests : Screen("lumio_requests")
     data object LumioLive : Screen("lumio_live")
     data object LumioWatchlist : Screen("lumio_watchlist")
+    data object LumioCalendar : Screen("lumio_calendar")
     data object LumioRewards : Screen("lumio_rewards")
     data object LumioPlatforms : Screen("lumio_platforms?id={id}") {
         fun createRoute(id: String) = "lumio_platforms?id=$id"

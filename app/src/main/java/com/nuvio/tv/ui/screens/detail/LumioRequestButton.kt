@@ -162,7 +162,7 @@ fun rememberLumioWatchNow(state: LumioMediaState): Boolean {
  */
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
-fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? = null, onFocused: () -> Unit = {}) {
+fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? = null, onFocused: () -> Unit = {}, text: String = "Streaming") {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
@@ -305,7 +305,7 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
             focusedContentColor = Color.Black
         )
     ) {
-        Icon(imageVector = Icons.Default.Cloud, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+        Icon(imageVector = if (text == "Lire") Icons.Default.PlayArrow else Icons.Default.Cloud, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
         ok?.let { up ->
             androidx.compose.foundation.layout.Box(
                 Modifier
@@ -315,7 +315,7 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
                     .drawBehind { drawRect(if (up) Color(0xFF30D158) else Color(0xFFFF453A)) }
             )
         }
-        Text(if (busy) "Recherche…" else "Streaming", fontWeight = FontWeight.Bold)
+        Text(if (busy) "Recherche…" else text, fontWeight = FontWeight.Bold)
     }
 }
 

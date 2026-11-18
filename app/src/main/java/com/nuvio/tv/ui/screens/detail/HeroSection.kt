@@ -293,8 +293,11 @@ fun HeroContentSection(
                     ) {
                         // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            // Titre absent : « Demander » (puis l'état du téléchargement) ; « Lire » ne sert qu'à Jellyfin
-                            LumioPrimaryButton(
+                            // Titre absent : « Lire » lance le streaming (cache TorBox / AllDebrid) et demande le titre en même temps ;
+                            // sans streaming sur le serveur : « Demander » comme avant
+                            if (rememberLumioWatchNow(lumio)) {
+                                LumioWatchNowButton(state = lumio, focusRequester = playButtonFocusRequester, onFocused = onHeroActionFocused, text = "Lire")
+                            } else LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
                                 onFocused = onHeroActionFocused
@@ -312,10 +315,6 @@ fun HeroContentSection(
                             }
                         )
 
-                        // Lumio : « Streaming » (choix de la qualité), aussi sur un titre déjà sur le serveur, à côté de « Lire »
-                        if (com.nuvio.tv.lumio.LumioMode.ENABLED && rememberLumioWatchNow(lumio)) {
-                            LumioWatchNowButton(state = lumio, onFocused = onHeroActionFocused)
-                        }
                         // Lumio, admin : « DL » (fichier Wawacity, téléchargement direct) sur un titre absent
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED) LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
                         // Notes de la famille retirées ; hors Lumio : « Ajouter à ma liste »

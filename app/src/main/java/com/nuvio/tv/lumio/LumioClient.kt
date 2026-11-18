@@ -219,6 +219,30 @@ class LumioClient(private val context: Context) {
     suspend fun ratingSummary(): JSONObject = JSONObject(call("GET", "/api/ratings/summary"))
 
     /** Liste « À voir » de l'utilisateur (la même que sur son téléphone). */
+    /** Calendrier : radar des sorties VOD d'amtVOD (disponible, sortie confirmée, au cinéma), lu par le serveur. */
+    suspend fun radar(refresh: Boolean = false): LumioRadar {
+        val j = JSONObject(call("GET", "/api/radar" + if (refresh) "?refresh=1" else "", readTimeoutMs = 60000))
+        val sections = j.optJSONArray("sections").objects().map { s ->
+            LumioRadarSection(
+                id = s.optString("id"),
+                name = s.optString("name"),
+                status = s.optString("status", "other"),
+                items = s.optJSONArray("items").objects().map { o ->
+                    LumioRadarItem(
+                        id = o.optString("id"),
+                        type = o.optString("type", "movie"),
+                        tmdbId = o.optInt("tmdbId").takeIf { it > 0 },
+                        name = o.optString("name"),
+                        poster = o.optString("poster").takeIf { it.startsWith("http") },
+                        releaseInfo = o.optString("releaseInfo").takeIf { it.isNotBlank() && it != "null" },
+                        description = o.optString("description").takeIf { it.isNotBlank() && it != "null" }
+                    )
+                }
+            )
+        }
+        return LumioRadar(sections, j.optString("error").takeIf { it.isNotBlank() && it != "null" })
+    }
+
     suspend fun watchlist(): List<LumioWatchItem> {
         val arr = JSONObject(call("GET", "/api/watchlist")).optJSONArray("items")
         return arr.objects().map { o ->
@@ -565,3 +589,7 @@ private fun JSONObject.toDownload(): LumioDownload = LumioDownload(
     via = optString("via").takeIf { it.isNotBlank() && it != "null" },
     title = optString("title").takeIf { it.isNotBlank() && it != "null" }
 )
+
+data class LumioRadarItem(val id: String, val type: String, val tmdbId: Int?, val name: String, val poster: String?, val releaseInfo: String?, val description: String?)
+data class LumioRadarSection(val id: String, val name: String, val status: String, val items: List<LumioRadarItem>)
+data class LumioRadar(val sections: List<LumioRadarSection>, val error: String?)
