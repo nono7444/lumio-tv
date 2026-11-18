@@ -236,13 +236,11 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
             busy = false
         }
     }
-    // Sources disponibles par qualité, vérifiées à l'ouverture du menu
-    var sources by remember { mutableStateOf<Map<Int, String>?>(null) }
-    LaunchedEffect(menu) {
-        if (menu) {
-            sources = null
-            sources = runCatching { state.client.watchProbe(state.type, tmdbId, season, episode) }.getOrElse { emptyMap() }
-        }
+    // Sources disponibles par qualité : cherchées dès l'affichage du bouton (le serveur prépare aussi les liens LooStream),
+    // pour que le menu et la lecture soient immédiats
+    var sources by remember(tmdbId, season) { mutableStateOf<Map<Int, String>?>(null) }
+    LaunchedEffect(tmdbId, season) {
+        sources = runCatching { state.client.watchProbe(state.type, tmdbId, season, episode) }.getOrElse { emptyMap() }
     }
     if (menu) {
         val first = remember { FocusRequester() }

@@ -271,6 +271,7 @@ class LumioClient(private val context: Context) {
         return listOf(1080, 720).associateWith { q ->
             val o = j.optJSONObject(q.toString())
             if (o == null) "?" else listOfNotNull(
+                if (o.optBoolean("loostream")) "LooStream (serveur)" else null,
                 if (o.optBoolean("torbox")) "TorBox" else null,
                 if (o.optBoolean("alldebrid")) "AllDebrid (serveur)" else null,
                 if (o.optBoolean("wawacity")) "Wawacity (serveur)" else null
@@ -303,8 +304,9 @@ class LumioClient(private val context: Context) {
             positionMs = (j.optDouble("position", 0.0) * 1000).toLong().coerceAtLeast(0L),
             durationMs = (j.optDouble("duration", 0.0) * 1000).toLong().coerceAtLeast(0L),
             requested = j.optJSONObject("download")?.optString("state") == "pending",
-            // D'où vient le flux : Wawacity, TorBox ou AllDebrid
+            // D'où vient le flux : LooStream (et le site), Wawacity, TorBox ou AllDebrid
             origin = when {
+                j.optString("service") == "loostream" -> j.optString("source").takeIf { it.isNotBlank() && it != "null" } ?: "LooStream"
                 j.optString("source") == "wawacity" -> "Wawacity"
                 j.optString("service") == "torbox" -> "TorBox"
                 else -> "AllDebrid"
