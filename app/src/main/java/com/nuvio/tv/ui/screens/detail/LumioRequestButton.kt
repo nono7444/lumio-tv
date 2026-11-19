@@ -194,55 +194,7 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
         if (busy) return
         scope.launch {
             busy = true
-            runCatching {
-                state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background, quality)
-            }.onSuccess { w ->
-                if (w.positionMs > 0L) runCatching {
-                    dagger.hilt.android.EntryPointAccessors
-                        .fromApplication(context.applicationContext, com.nuvio.tv.lumio.LumioEntryPoint::class.java)
-                        .watchProgressRepository()
-                        .saveProgress(
-                            com.nuvio.tv.domain.model.WatchProgress(
-                                contentId = meta.id,
-                                contentType = meta.apiType,
-                                name = meta.name,
-                                poster = meta.poster,
-                                backdrop = meta.background,
-                                logo = meta.logo,
-                                videoId = meta.id,
-                                season = season,
-                                episode = episode,
-                                episodeTitle = null,
-                                position = w.positionMs,
-                                duration = w.durationMs,
-                                lastWatched = System.currentTimeMillis(),
-                                progressPercent = if (w.durationMs <= 0L) 5f else null
-                            ),
-                            syncRemote = false
-                        )
-                }
-                com.nuvio.tv.lumio.LumioStreamSession.current =
-                    com.nuvio.tv.lumio.LumioStreamSession.Session(w.url, state.type, tmdbId, season, episode, meta.name)
-                val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
-                    streamUrl = w.url,
-                    title = meta.name,
-                    streamName = listOfNotNull("Streaming", w.origin, w.quality, w.language).joinToString(" · "),
-                    year = meta.releaseInfo?.take(4),
-                    contentId = meta.id,
-                    contentType = meta.apiType,
-                    contentName = meta.name,
-                    poster = meta.poster,
-                    backdrop = meta.background,
-                    logo = meta.logo,
-                    season = season,
-                    episode = episode
-                )
-                android.widget.Toast.makeText(context, "Streaming depuis ${w.origin}${if (w.downloading) " · téléchargement lancé sur le serveur" else ""}", android.widget.Toast.LENGTH_LONG).show()
-                com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
-                state.reload()
-            }.onFailure {
-                android.widget.Toast.makeText(context, it.message ?: "Pas de streaming pour l'instant", android.widget.Toast.LENGTH_LONG).show()
-            }
+            launchLumioStream(context, state, tmdbId, season, episode, quality)
             busy = false
         }
     }
@@ -328,9 +280,12 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
 fun LumioPrimaryButton(
     state: LumioMediaState,
     focusRequester: FocusRequester? = null,
-    onFocused: () -> Unit = {}
+    onFocused: () -> Unit = {},
+    /** Film absent : « Demander » lance d'abord un streaming s'il est prêt (la demande part avec), sinon la demande */
+    tryStream: Boolean = false
 ) {
     var dialog by remember { mutableStateOf(false) }
+    var trying by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val active = state.active
     val pending = state.pending
@@ -351,6 +306,7 @@ fun LumioPrimaryButton(
         active != null && d?.state == "warning" -> Triple("Bloqué : à vérifier", Orange, 1f)
         active != null -> Triple("Recherche d'une source…", Blue, 0.06f)
         pending != null -> Triple("En attente de validation", Orange, 0f)
+        trying -> Triple("Recherche d'un streaming…", Color.White, 0f)
         state.canRequest -> Triple("Demander", Color.White, 0f)
         else -> Triple("Pas encore disponible", Color.White, 0f)
     }
@@ -365,6 +321,17 @@ fun LumioPrimaryButton(
         Button(
             onClick = {
                 when {
+                    isRequest && tryStream && state.type == "movie" && !trying -> scope.launch {
+                        trying = true
+                        val tmdb = state.media?.tmdbId ?: state.meta.lumioTmdb()
+                        val ready = tmdb != null && runCatching {
+                            kotlinx.coroutines.withTimeoutOrNull(8000) { state.client.watchProbe("movie", tmdb, null, null) }
+                                ?.values?.any { it.isNotBlank() && it != "?" } == true
+                        }.getOrDefault(false)
+                        val launched = ready && launchLumioStream(context, state, tmdb!!, null, null, null)
+                        trying = false
+                        if (!launched) dialog = true
+                    }
                     isRequest -> dialog = true
                     canRecheck && active != null && !rechecking -> scope.launch {
                         rechecking = true
@@ -642,4 +609,61 @@ private fun suggestFolder(folders: List<LumioFolder>, meta: Meta, default: Strin
     if (animation || "famil" in genres || "enfant" in genres || "kids" in genres)
         folders.firstOrNull { Regex("kid|enfant|jeunesse|famil", RegexOption.IGNORE_CASE).containsMatchIn(last(it.path)) }?.let { return it.path }
     return default ?: folders.firstOrNull()?.path
+}
+
+/** Lance un streaming Lumio (cache TorBox / AllDebrid, Wawacity) et ouvre le lecteur ; le titre absent est demandé en même temps. */
+suspend fun launchLumioStream(context: android.content.Context, state: LumioMediaState, tmdbId: Int, season: Int?, episode: Int?, quality: Int?): Boolean {
+    val meta = state.meta
+    var ok = false
+runCatching {
+        state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background, quality)
+    }.onSuccess { w ->
+        ok = true
+        if (w.positionMs > 0L) runCatching {
+            dagger.hilt.android.EntryPointAccessors
+                .fromApplication(context.applicationContext, com.nuvio.tv.lumio.LumioEntryPoint::class.java)
+                .watchProgressRepository()
+                .saveProgress(
+                    com.nuvio.tv.domain.model.WatchProgress(
+                        contentId = meta.id,
+                        contentType = meta.apiType,
+                        name = meta.name,
+                        poster = meta.poster,
+                        backdrop = meta.background,
+                        logo = meta.logo,
+                        videoId = meta.id,
+                        season = season,
+                        episode = episode,
+                        episodeTitle = null,
+                        position = w.positionMs,
+                        duration = w.durationMs,
+                        lastWatched = System.currentTimeMillis(),
+                        progressPercent = if (w.durationMs <= 0L) 5f else null
+                    ),
+                    syncRemote = false
+                )
+        }
+        com.nuvio.tv.lumio.LumioStreamSession.current =
+            com.nuvio.tv.lumio.LumioStreamSession.Session(w.url, state.type, tmdbId, season, episode, meta.name)
+        val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
+            streamUrl = w.url,
+            title = meta.name,
+            streamName = listOfNotNull("Streaming", w.origin, w.quality, w.language).joinToString(" · "),
+            year = meta.releaseInfo?.take(4),
+            contentId = meta.id,
+            contentType = meta.apiType,
+            contentName = meta.name,
+            poster = meta.poster,
+            backdrop = meta.background,
+            logo = meta.logo,
+            season = season,
+            episode = episode
+        )
+        android.widget.Toast.makeText(context, "Streaming depuis ${w.origin}${if (w.downloading) " · téléchargement lancé sur le serveur" else ""}", android.widget.Toast.LENGTH_LONG).show()
+        com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
+        state.reload()
+    }.onFailure {
+        android.widget.Toast.makeText(context, it.message ?: "Pas de streaming pour l'instant", android.widget.Toast.LENGTH_LONG).show()
+    }
+    return ok
 }

@@ -293,14 +293,12 @@ fun HeroContentSection(
                     ) {
                         // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            // Titre absent : « Lire » lance le streaming (cache TorBox / AllDebrid) et demande le titre en même temps ;
-                            // sans streaming sur le serveur : « Demander » comme avant
-                            if (rememberLumioWatchNow(lumio)) {
-                                LumioWatchNowButton(state = lumio, focusRequester = playButtonFocusRequester, onFocused = onHeroActionFocused, text = "Lire")
-                            } else LumioPrimaryButton(
+                            // Titre absent : « Demander » ; pour un film, un streaming prêt (cache) se lance d'abord, demande comprise
+                            LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
-                                onFocused = onHeroActionFocused
+                                onFocused = onHeroActionFocused,
+                                tryStream = rememberLumioWatchNow(lumio)
                             )
                         } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),
