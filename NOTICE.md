@@ -50,3 +50,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Nouvel onglet « Calendrier » : radar des sorties VOD d'amtVOD (disponible, sortie confirmée, au cinéma), lu par le serveur Lumio.
 - Fréquence d'images : pas de changement de mode qui ferait passer un film 4K en 1080p (box qui n'annonce que ses modes 1080p) ni de mode « à peu près » (50 Hz pour du 23,976 i/s).
 - Titre absent : retour du bouton « Demander » ; pour un film, il cherche d'abord un streaming prêt (cache) et le lance, la demande partant avec ; sinon la demande comme avant.
+- « Demander » sur un film absent : si un streaming est prêt, choix entre « Regarder maintenant » (la demande part avec) et « Seulement demander » ; plus de lecture imposée pour faire une demande (fichier LumioRequestButton.kt).

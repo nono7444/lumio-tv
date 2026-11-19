@@ -286,6 +286,8 @@ fun LumioPrimaryButton(
 ) {
     var dialog by remember { mutableStateOf(false) }
     var trying by remember { mutableStateOf(false) }
+    // Lumio : streaming prêt → choix « Regarder maintenant » ou « Seulement demander » (plus de lecture imposée)
+    var choice by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     val active = state.active
     val pending = state.pending
@@ -328,9 +330,8 @@ fun LumioPrimaryButton(
                             kotlinx.coroutines.withTimeoutOrNull(8000) { state.client.watchProbe("movie", tmdb, null, null) }
                                 ?.values?.any { it.isNotBlank() && it != "?" } == true
                         }.getOrDefault(false)
-                        val launched = ready && launchLumioStream(context, state, tmdb!!, null, null, null)
                         trying = false
-                        if (!launched) dialog = true
+                        if (ready) choice = tmdb else dialog = true
                     }
                     isRequest -> dialog = true
                     canRecheck && active != null && !rechecking -> scope.launch {
@@ -406,6 +407,35 @@ fun LumioPrimaryButton(
                 style = MaterialTheme.typography.labelMedium
             )
         }
+    }
+
+    val readyTmdb = choice
+    if (readyTmdb != null) {
+        val first = remember { FocusRequester() }
+        NuvioDialog(
+            onDismiss = { choice = null },
+            title = "Disponible en streaming",
+            subtitle = "${state.meta.name} peut se regarder tout de suite (la demande part avec), ou être seulement demandé.",
+            width = 640.dp
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        choice = null
+                        scope.launch { if (!launchLumioStream(context, state, readyTmdb, null, null, null)) dialog = true }
+                    },
+                    modifier = Modifier.fillMaxWidth().focusRequester(first)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Regarder maintenant", fontWeight = FontWeight.Bold)
+                }
+                Button(onClick = { choice = null; dialog = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Seulement demander", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+        LaunchedEffect(Unit) { runCatching { delay(100); first.requestFocus() } }
     }
 
     val m = state.media
