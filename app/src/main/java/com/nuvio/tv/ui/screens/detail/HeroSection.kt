@@ -291,14 +291,13 @@ fun HeroContentSection(
                         horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Lumio : titre absent du serveur → « Demander » puis la progression du téléchargement à la place de « Lire »
+                        // Lumio : titre absent du serveur → « Télécharger » ou « Demander », puis la progression du téléchargement à la place de « Lire »
                         if (com.nuvio.tv.lumio.LumioMode.ENABLED && lumio.media != null && !lumio.playable) {
-                            // Titre absent : « Demander » ; pour un film, un streaming prêt (cache) se lance d'abord, demande comprise
+                            // Titre absent : « Télécharger » s'il est sorti, sinon « Demander » avec la date (plus de streaming)
                             LumioPrimaryButton(
                                 state = lumio,
                                 focusRequester = playButtonFocusRequester,
-                                onFocused = onHeroActionFocused,
-                                tryStream = rememberLumioWatchNow(lumio)
+                                onFocused = onHeroActionFocused
                             )
                         } else PlayButton(
                             text = if (isPlayEnabled) nextToWatch?.displayText else stringResource(R.string.playback_unavailable),

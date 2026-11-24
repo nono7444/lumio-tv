@@ -84,6 +84,9 @@ data class LumioRequest(
     val mine: Boolean,
     val download: LumioDownload? = null
 )
+/** Sortie d'un titre (calendrier puis TMDB, côté serveur) : pas encore sorti → « Demander » avec la date, sinon « Télécharger ». */
+data class LumioRelease(val upcoming: Boolean, val label: String?)
+
 data class LumioMedia(
     val status: Int,
     val tmdbId: Int?,
@@ -458,6 +461,12 @@ class LumioClient(private val context: Context) {
             }
         )
     }
+
+    /** Date de sortie : « Demander » (au cinéma, sortie numérique à venir) ou « Télécharger » (déjà sorti). */
+    suspend fun release(type: String, tmdbId: Int): LumioRelease? = runCatching {
+        val j = JSONObject(call("GET", "/api/release?type=$type&tmdbId=$tmdbId"))
+        LumioRelease(upcoming = j.optString("state") == "upcoming", label = j.optString("label").takeIf { !j.isNull("label") && it.isNotBlank() })
+    }.getOrNull()
 
     suspend fun me(): LumioMe {
         val json = JSONObject(call("GET", "/api/me"))

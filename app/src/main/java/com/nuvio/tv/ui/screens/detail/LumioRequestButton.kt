@@ -88,6 +88,8 @@ class LumioMediaState internal constructor(
     val meta: Meta,
     val client: LumioClient,
     val media: LumioMedia?,
+    /** Sortie du titre (null tant qu'on ne sait pas) : « Demander » + date, ou « Télécharger » */
+    val release: com.nuvio.tv.lumio.LumioRelease?,
     val reload: () -> Unit
 ) {
     val type: String get() = meta.lumioType()
@@ -112,6 +114,7 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
     val context = LocalContext.current
     val client = remember { LumioClient.get(context) }
     var media by remember(meta.id) { mutableStateOf<LumioMedia?>(null) }
+    var release by remember(meta.id) { mutableStateOf<com.nuvio.tv.lumio.LumioRelease?>(null) }
     var reload by remember(meta.id) { mutableStateOf(0) }
     val type = meta.lumioType()
 
@@ -119,6 +122,14 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
         runCatching {
             client.media(type, meta.lumioTmdb(), meta.lumioImdb(), if (type == "tv") meta.lumioSeasons() else emptyList())
         }.getOrNull()?.let { media = it }
+    }
+    // Sortie du titre : une seule fois par fiche
+    LaunchedEffect(meta.id) {
+        val tmdb = meta.lumioTmdb() ?: media?.tmdbId
+        if (tmdb != null) release = client.release(type, tmdb)
+    }
+    LaunchedEffect(media?.tmdbId) {
+        if (release == null && meta.lumioTmdb() == null) media?.tmdbId?.let { release = client.release(type, it) }
     }
     // Suivi en direct pendant le téléchargement (toutes les 5 s), jusqu'à l'arrivée dans Jellyfin
     // (et toutes les 30 s tant qu'une demande attend la validation de l'admin)
@@ -141,135 +152,12 @@ fun rememberLumioMedia(meta: Meta): LumioMediaState {
             wasWaiting = false
         }
     }
-    return LumioMediaState(meta, client, media) { reload++ }
+    return LumioMediaState(meta, client, media, release) { reload++ }
 }
 
 private val Blue = Color(0xFF3D8BFF)
 private val Green = Color(0xFF30D158)
 private val Orange = Color(0xFFFF9F0A)
-
-/** Admin : le serveur permet-il le streaming (clé TorBox ou AllDebrid) ? */
-@Composable
-fun rememberLumioWatchNow(state: LumioMediaState): Boolean {
-    var can by remember(state.meta.id) { mutableStateOf(false) }
-    LaunchedEffect(state.meta.id) { can = state.client.watchNowEnabled() }
-    return can && (state.media?.tmdbId ?: state.meta.lumioTmdb()) != null
-}
-
-/**
- * « Streaming » (admin) : menu du choix de la qualité, puis le serveur Lumio cherche une version dans le cache TorBox /
- * AllDebrid (Wawacity en dernier recours) et renvoie un lien de lecture. Titre absent : il arrive aussi sur le serveur.
- */
-@OptIn(ExperimentalTvMaterial3Api::class)
-@Composable
-fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? = null, onFocused: () -> Unit = {}, text: String = "Streaming") {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var busy by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
-    // Pastille : vert = au moins un service de streaming marche, rouge = aucun (revérifié chaque minute)
-    var ok by remember { mutableStateOf<Boolean?>(null) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            ok = state.client.watchNowHealth()
-            delay(60_000)
-        }
-    }
-    val meta = state.meta
-    val tmdbId = state.media?.tmdbId ?: meta.lumioTmdb() ?: return
-    // Série : premier épisode de la première saison absente du serveur (sinon S1E1)
-    val defSeason = if (state.type == "tv") (state.media?.seasons?.filter { it.number > 0 && it.status == MediaStatus.UNKNOWN }?.minOfOrNull { it.number } ?: 1) else null
-    // Série : saison et épisode choisis dans le menu « Streaming »
-    val episodesBySeason = remember(meta.id) {
-        meta.videos.filter { (it.season ?: 0) > 0 && it.episode != null }
-            .groupBy { it.season!! }
-            .mapValues { (_, v) -> v.mapNotNull { it.episode }.distinct().sorted() }
-            .toSortedMap()
-    }
-    var selSeason by remember(meta.id) { mutableStateOf(defSeason ?: 1) }
-    var selEpisode by remember(meta.id) { mutableStateOf(1) }
-    val season = if (state.type == "tv") selSeason else null
-    val episode = if (state.type == "tv") selEpisode else null
-    fun start(quality: Int) {
-        if (busy) return
-        scope.launch {
-            busy = true
-            launchLumioStream(context, state, tmdbId, season, episode, quality)
-            busy = false
-        }
-    }
-    // Sources disponibles par qualité : cherchées dès l'affichage du bouton (le serveur prépare aussi les liens LooStream),
-    // pour que le menu et la lecture soient immédiats
-    var sources by remember(tmdbId, season, episode) { mutableStateOf<Map<Int, String>?>(null) }
-    LaunchedEffect(tmdbId, season, episode) {
-        sources = runCatching { state.client.watchProbe(state.type, tmdbId, season, episode) }.getOrElse { emptyMap() }
-    }
-    if (menu) {
-        val first = remember { FocusRequester() }
-        NuvioDialog(onDismiss = { menu = false }, title = "Streaming", subtitle = if (state.type == "tv") "${meta.name} · S${season}E${episode} · choisis la qualité" else "${meta.name} · choisis la qualité", width = 640.dp) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (state.type == "tv" && episodesBySeason.isNotEmpty()) {
-                    // Saison, puis épisode
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(episodesBySeason.keys.toList()) { n ->
-                            Button(
-                                onClick = { selSeason = n; selEpisode = episodesBySeason[n]?.firstOrNull() ?: 1 },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (n == selSeason) Color.White else Color.White.copy(alpha = 0.12f),
-                                    contentColor = if (n == selSeason) Color.Black else Color.White
-                                )
-                            ) { Text("Saison $n", fontWeight = FontWeight.Bold) }
-                        }
-                    }
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(episodesBySeason[selSeason].orEmpty()) { n ->
-                            Button(
-                                onClick = { selEpisode = n },
-                                colors = ButtonDefaults.colors(
-                                    containerColor = if (n == selEpisode) Color.White else Color.White.copy(alpha = 0.12f),
-                                    contentColor = if (n == selEpisode) Color.Black else Color.White
-                                )
-                            ) { Text("É$n", fontWeight = FontWeight.Bold) }
-                        }
-                    }
-                }
-                listOf(1080 to "1080p", 720 to "720p").forEachIndexed { i, (q, label) ->
-                    Button(
-                        onClick = { menu = false; start(q) },
-                        modifier = Modifier.fillMaxWidth().then(if (i == 0) Modifier.focusRequester(first) else Modifier)
-                    ) { Text("$label · ${sources?.get(q) ?: "recherche des sources…"}", fontWeight = FontWeight.Bold) }
-                }
-            }
-        }
-        LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
-    }
-    Button(
-        onClick = { if (!busy) menu = true },
-        shape = ButtonDefaults.shape(RoundedCornerShape(50)),
-        modifier = Modifier
-            .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-            .onFocusChanged { if (it.isFocused) onFocused() }
-            .widthIn(min = 200.dp),
-        colors = ButtonDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.12f),
-            contentColor = Color.White,
-            focusedContainerColor = Color.White,
-            focusedContentColor = Color.Black
-        )
-    ) {
-        Icon(imageVector = if (text == "Lire") Icons.Default.PlayArrow else Icons.Default.Cloud, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-        ok?.let { up ->
-            androidx.compose.foundation.layout.Box(
-                Modifier
-                    .padding(end = 8.dp)
-                    .size(10.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .drawBehind { drawRect(if (up) Color(0xFF30D158) else Color(0xFFFF453A)) }
-            )
-        }
-        Text(if (busy) "Recherche…" else text, fontWeight = FontWeight.Bold)
-    }
-}
 
 /**
  * Bouton principal quand le titre n'est pas (encore) sur le serveur : il remplace « Lire ».
@@ -280,14 +168,12 @@ fun LumioWatchNowButton(state: LumioMediaState, focusRequester: FocusRequester? 
 fun LumioPrimaryButton(
     state: LumioMediaState,
     focusRequester: FocusRequester? = null,
-    onFocused: () -> Unit = {},
-    /** Film absent : « Demander » lance d'abord un streaming s'il est prêt (la demande part avec), sinon la demande */
-    tryStream: Boolean = false
+    onFocused: () -> Unit = {}
 ) {
     var dialog by remember { mutableStateOf(false) }
-    var trying by remember { mutableStateOf(false) }
-    // Lumio : streaming prêt → choix « Regarder maintenant » ou « Seulement demander » (plus de lecture imposée)
-    var choice by remember { mutableStateOf<Int?>(null) }
+    // Pas encore sorti (cinéma, date numérique à venir) : « Demander » ; déjà sorti : « Télécharger »
+    val notOut = state.release?.upcoming == true
+    val verb = if (notOut) "Demander" else "Télécharger"
     val scope = rememberCoroutineScope()
     val active = state.active
     val pending = state.pending
@@ -308,8 +194,7 @@ fun LumioPrimaryButton(
         active != null && d?.state == "warning" -> Triple("Bloqué : à vérifier", Orange, 1f)
         active != null -> Triple("Recherche d'une source…", Blue, 0.06f)
         pending != null -> Triple("En attente de validation", Orange, 0f)
-        trying -> Triple("Recherche d'un streaming…", Color.White, 0f)
-        state.canRequest -> Triple("Demander", Color.White, 0f)
+        state.canRequest -> Triple(verb, Color.White, 0f)
         else -> Triple("Pas encore disponible", Color.White, 0f)
     }
     val isRequest = active == null && pending == null && state.canRequest
@@ -323,16 +208,6 @@ fun LumioPrimaryButton(
         Button(
             onClick = {
                 when {
-                    isRequest && tryStream && state.type == "movie" && !trying -> scope.launch {
-                        trying = true
-                        val tmdb = state.media?.tmdbId ?: state.meta.lumioTmdb()
-                        val ready = tmdb != null && runCatching {
-                            kotlinx.coroutines.withTimeoutOrNull(8000) { state.client.watchProbe("movie", tmdb, null, null) }
-                                ?.values?.any { it.isNotBlank() && it != "?" } == true
-                        }.getOrDefault(false)
-                        trying = false
-                        if (ready) choice = tmdb else dialog = true
-                    }
                     isRequest -> dialog = true
                     canRecheck && active != null && !rechecking -> scope.launch {
                         rechecking = true
@@ -375,7 +250,8 @@ fun LumioPrimaryButton(
         ) {
             Icon(
                 imageVector = when {
-                    isRequest -> Icons.Default.Send
+                    isRequest && notOut -> Icons.Default.Send
+                    isRequest -> Icons.Default.Download
                     d?.state == "warning" -> Icons.Default.Warning
                     pending != null -> Icons.Default.HourglassTop
                     else -> Icons.Default.Download
@@ -386,6 +262,12 @@ fun LumioPrimaryButton(
             Text(text, fontWeight = FontWeight.Bold)
         }
         when {
+            // Pas encore sorti : la date (cinéma ou sortie numérique) sous « Demander »
+            isRequest && state.release?.label != null -> Text(
+                state.release.label,
+                color = Color(0xFFFFC93C),
+                style = MaterialTheme.typography.labelMedium
+            )
             d != null && d.via == "auto" && !d.title.isNullOrBlank() -> Text(
                 if (rechecking) "Relance de la recherche…" else d.title.removePrefix("Lumio Auto · ").replaceFirstChar { it.uppercase() } + if (canRecheck) " · OK pour relancer la recherche" else "",
                 color = NuvioTheme.extendedColors.textSecondary,
@@ -409,41 +291,13 @@ fun LumioPrimaryButton(
         }
     }
 
-    val readyTmdb = choice
-    if (readyTmdb != null) {
-        val first = remember { FocusRequester() }
-        NuvioDialog(
-            onDismiss = { choice = null },
-            title = "Disponible en streaming",
-            subtitle = "${state.meta.name} peut se regarder tout de suite (la demande part avec), ou être seulement demandé.",
-            width = 640.dp
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = {
-                        choice = null
-                        scope.launch { if (!launchLumioStream(context, state, readyTmdb, null, null, null)) dialog = true }
-                    },
-                    modifier = Modifier.fillMaxWidth().focusRequester(first)
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                    Text("Regarder maintenant", fontWeight = FontWeight.Bold)
-                }
-                Button(onClick = { choice = null; dialog = true }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
-                    Text("Seulement demander", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-        LaunchedEffect(Unit) { runCatching { delay(100); first.requestFocus() } }
-    }
-
     val m = state.media
     if (dialog && m != null) {
         LumioRequestDialog(
             meta = state.meta,
             media = m,
             client = state.client,
+            verb = verb,
             onDismiss = { dialog = false },
             onDone = {
                 dialog = false
@@ -475,6 +329,7 @@ private fun LumioRequestDialog(
     meta: Meta,
     media: LumioMedia,
     client: LumioClient,
+    verb: String = "Demander",
     onDismiss: () -> Unit,
     onDone: () -> Unit
 ) {
@@ -504,7 +359,7 @@ private fun LumioRequestDialog(
 
     NuvioDialog(
         onDismiss = onDismiss,
-        title = if (type == "tv") "Demander la série" else "Demander le film",
+        title = if (type == "tv") "$verb la série" else "$verb le film",
         subtitle = meta.name,
         width = 560.dp
     ) {
@@ -590,8 +445,8 @@ private fun LumioRequestDialog(
             ) {
                 Text(
                     if (busy) "Envoi…"
-                    else if (type == "tv" && selected.isNotEmpty()) "Demander (${selected.size})"
-                    else "Demander"
+                    else if (type == "tv" && selected.isNotEmpty()) "$verb (${selected.size})"
+                    else verb
                 )
             }
             Button(
@@ -639,61 +494,4 @@ private fun suggestFolder(folders: List<LumioFolder>, meta: Meta, default: Strin
     if (animation || "famil" in genres || "enfant" in genres || "kids" in genres)
         folders.firstOrNull { Regex("kid|enfant|jeunesse|famil", RegexOption.IGNORE_CASE).containsMatchIn(last(it.path)) }?.let { return it.path }
     return default ?: folders.firstOrNull()?.path
-}
-
-/** Lance un streaming Lumio (cache TorBox / AllDebrid, Wawacity) et ouvre le lecteur ; le titre absent est demandé en même temps. */
-suspend fun launchLumioStream(context: android.content.Context, state: LumioMediaState, tmdbId: Int, season: Int?, episode: Int?, quality: Int?): Boolean {
-    val meta = state.meta
-    var ok = false
-runCatching {
-        state.client.watchNow(state.type, tmdbId, season, episode, meta.name, meta.releaseInfo?.take(4), meta.poster, meta.background, quality)
-    }.onSuccess { w ->
-        ok = true
-        if (w.positionMs > 0L) runCatching {
-            dagger.hilt.android.EntryPointAccessors
-                .fromApplication(context.applicationContext, com.nuvio.tv.lumio.LumioEntryPoint::class.java)
-                .watchProgressRepository()
-                .saveProgress(
-                    com.nuvio.tv.domain.model.WatchProgress(
-                        contentId = meta.id,
-                        contentType = meta.apiType,
-                        name = meta.name,
-                        poster = meta.poster,
-                        backdrop = meta.background,
-                        logo = meta.logo,
-                        videoId = meta.id,
-                        season = season,
-                        episode = episode,
-                        episodeTitle = null,
-                        position = w.positionMs,
-                        duration = w.durationMs,
-                        lastWatched = System.currentTimeMillis(),
-                        progressPercent = if (w.durationMs <= 0L) 5f else null
-                    ),
-                    syncRemote = false
-                )
-        }
-        com.nuvio.tv.lumio.LumioStreamSession.current =
-            com.nuvio.tv.lumio.LumioStreamSession.Session(w.url, state.type, tmdbId, season, episode, meta.name)
-        val route = com.nuvio.tv.ui.navigation.Screen.Player.createRoute(
-            streamUrl = w.url,
-            title = meta.name,
-            streamName = listOfNotNull("Streaming", w.origin, w.quality, w.language).joinToString(" · "),
-            year = meta.releaseInfo?.take(4),
-            contentId = meta.id,
-            contentType = meta.apiType,
-            contentName = meta.name,
-            poster = meta.poster,
-            backdrop = meta.background,
-            logo = meta.logo,
-            season = season,
-            episode = episode
-        )
-        android.widget.Toast.makeText(context, "Streaming depuis ${w.origin}${if (w.downloading) " · téléchargement lancé sur le serveur" else ""}", android.widget.Toast.LENGTH_LONG).show()
-        com.nuvio.tv.lumio.LumioPlayBus.navigate?.invoke(route)
-        state.reload()
-    }.onFailure {
-        android.widget.Toast.makeText(context, it.message ?: "Pas de streaming pour l'instant", android.widget.Toast.LENGTH_LONG).show()
-    }
-    return ok
 }
