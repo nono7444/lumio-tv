@@ -1578,11 +1578,54 @@ class MetaDetailsViewModel @Inject constructor(
         val enrichment = withContext(Dispatchers.IO) {
             tmdbMetadataService.fetchEnrichment(tmdbId = tmdbId, contentType = contentType, language = settings.language)
         } ?: return meta
-        return meta.copy(
+        val withArt = meta.copy(
             background = enrichment.backdrop ?: meta.background,
             logo = enrichment.logo ?: meta.logo,
             description = meta.description?.takeIf { it.isNotBlank() } ?: enrichment.description
         )
+        return if (meta.apiType in listOf("series", "tv")) {
+            runCatching { lumioUpcomingEpisodes(withArt, tmdbId, settings.language) }.getOrDefault(withArt)
+        } else withArt
+    }
+
+    /**
+     * Lumio : épisodes annoncés sur TMDB mais pas encore sur le serveur (séries hebdomadaires), ajoutés grisés
+     * avec leur date de sortie, après le dernier épisode de la dernière saison, et la saison suivante si elle démarre.
+     */
+    private suspend fun lumioUpcomingEpisodes(meta: Meta, tmdbId: String, language: String): Meta {
+        val present = meta.videos.filter { (it.season ?: 0) > 0 && it.episode != null }
+        val lastSeason = present.maxOfOrNull { it.season ?: 0 } ?: return meta
+        val lastEpisode = present.filter { it.season == lastSeason }.maxOfOrNull { it.episode ?: 0 } ?: 0
+        val have = present.mapTo(HashSet()) { (it.season ?: 0) to (it.episode ?: 0) }
+        val tmdbEpisodes = withContext(Dispatchers.IO) {
+            tmdbMetadataService.fetchEpisodeEnrichment(tmdbId = tmdbId, seasonNumbers = listOf(lastSeason, lastSeason + 1), language = language)
+        }
+        // Absent et sorti il y a plus de 2 semaines : pas « à venir » (vieille saison incomplète)
+        val old = LocalDate.now().minusDays(14).toString()
+        val upcoming = tmdbEpisodes
+            .filter { (key, ep) ->
+                val (season, episode) = key
+                key !in have &&
+                    (season == lastSeason && episode > lastEpisode || season == lastSeason + 1) &&
+                    (ep.airDate.isNullOrBlank() || ep.airDate >= old)
+            }
+            .toList()
+            .sortedWith(compareBy({ it.first.first }, { it.first.second }))
+            .map { (key, ep) ->
+                Video(
+                    id = "lumio-upcoming:$tmdbId:${key.first}:${key.second}",
+                    title = ep.title ?: "Épisode ${key.second}",
+                    released = ep.airDate,
+                    thumbnail = ep.thumbnail,
+                    season = key.first,
+                    episode = key.second,
+                    overview = ep.overview,
+                    runtime = ep.runtimeMinutes,
+                    available = false
+                )
+            }
+        if (upcoming.isEmpty()) return meta
+        return meta.copy(videos = meta.videos + upcoming)
     }
 
     private suspend fun enrichMeta(meta: Meta): Meta {

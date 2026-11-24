@@ -535,7 +535,10 @@ fun EpisodesRow(
             val imdbRating = remember(seasonEp, episodeRatings) { seasonEp?.let { episodeRatings[it] } }
             val isMarkedWatched = remember(seasonEp, watchedEpisodes) { seasonEp?.let { watchedEpisodes.contains(it) } ?: false }
             val episodeFocusRequester = remember(episode.id) { episodeFocusRequesters.getOrPut(episode.id) { FocusRequester() } }
-            val episodeOnClick = remember(episode, onEpisodeClick) { { onEpisodeClick(episode) } }
+            // Lumio : épisode pas encore sorti ou pas encore sur le serveur → rien à lancer
+            val episodeOnClick = remember(episode, onEpisodeClick) {
+                { if (!(com.nuvio.tv.lumio.LumioMode.ENABLED && episode.available == false)) onEpisodeClick(episode) }
+            }
             val episodeOnLongPress = remember(episode.id) { { optionsEpisode = episode } }
             val episodeOnFocused = remember(episode.id) { { onEpisodeFocused(episode.id) } }
             val isRestoreTarget = episode.id == restoreEpisodeId
@@ -1104,7 +1107,7 @@ private fun EpisodeCard(
                         )
                 ) {
                     Text(
-                        text = strUnavailable.uppercase(Locale.getDefault()),
+                        text = lumioAirLabel(episode.released, formattedDate) ?: strUnavailable.uppercase(Locale.getDefault()),
                         style = episodeBadgeStyle,
                         maxLines = 1
                     )
@@ -1325,6 +1328,18 @@ private fun formatEpisodeRuntime(runtimeMinutes: Int): String {
         hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
         hours > 0 -> "${hours}h"
         else -> "${minutes}m"
+    }
+}
+
+/** Lumio : « SORTIE LE 2 DÉCEMBRE 2026 », « SORT AUJOURD'HUI » ou « ARRIVE BIENTÔT » à la place de « Indisponible ». */
+private fun lumioAirLabel(released: String?, formattedDate: String): String? {
+    if (!com.nuvio.tv.lumio.LumioMode.ENABLED) return null
+    val date = released?.let(::parseEpisodeReleaseLocalDate) ?: return "DATE À VENIR"
+    val today = java.time.LocalDate.now()
+    return when {
+        date.isEqual(today) -> "SORT AUJOURD'HUI"
+        date.isAfter(today) -> "SORTIE LE ${formattedDate.uppercase(Locale.FRENCH)}"
+        else -> "ARRIVE BIENTÔT"
     }
 }
 
