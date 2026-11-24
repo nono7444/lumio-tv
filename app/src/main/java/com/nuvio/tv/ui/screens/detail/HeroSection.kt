@@ -312,8 +312,7 @@ fun HeroContentSection(
                             }
                         )
 
-                        // Lumio, admin : « DL » (fichier Wawacity, téléchargement direct) sur un titre absent
-                        if (com.nuvio.tv.lumio.LumioMode.ENABLED) LumioSecourButton(state = lumio, onFocused = onHeroActionFocused)
+                        // Lumio : bouton « DL » (Lumio Secour) retiré de la fiche ; « Télécharger » / « Demander » suffit
                         // Notes de la famille retirées ; hors Lumio : « Ajouter à ma liste »
                         if (!com.nuvio.tv.lumio.LumioMode.ENABLED) {
                             ActionIconButton(
