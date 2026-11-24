@@ -57,7 +57,7 @@ private suspend fun latestBackdrop(repository: ServerRepository, tile: LumioLibr
     val session = repository.session(tile.connection.id) ?: return@withContext null
     val base = tile.connection.address.trimEnd('/')
     val user = tile.connection.remoteUserId
-    val fallback = "$base/Items/${tile.library.id}/Images/Primary?maxWidth=900&api_key=${session.token}"
+    val fallback = "$base/Items/${tile.library.id}/Images/Primary?maxWidth=640&api_key=${session.token}"
     runCatching {
         val url = "$base/Users/$user/Items/Latest?ParentId=${URLEncoder.encode(tile.library.id, "UTF-8")}&Limit=6&Fields=BackdropImageTags&ImageTypeLimit=1&api_key=${session.token}"
         val conn = URL(url).openConnection() as HttpURLConnection
@@ -69,12 +69,12 @@ private suspend fun latestBackdrop(repository: ServerRepository, tile: LumioLibr
             val it: JSONObject = arr.getJSONObject(i)
             val tags = it.optJSONArray("BackdropImageTags")
             if (tags != null && tags.length() > 0) {
-                return@runCatching "$base/Items/${it.optString("Id")}/Images/Backdrop/0?maxWidth=900&tag=${tags.optString(0)}&api_key=${session.token}"
+                return@runCatching "$base/Items/${it.optString("Id")}/Images/Backdrop/0?maxWidth=640&tag=${tags.optString(0)}&api_key=${session.token}"
             }
             val parent = it.optString("ParentBackdropItemId")
             val ptags = it.optJSONArray("ParentBackdropImageTags")
             if (parent.isNotBlank() && ptags != null && ptags.length() > 0) {
-                return@runCatching "$base/Items/$parent/Images/Backdrop/0?maxWidth=900&tag=${ptags.optString(0)}&api_key=${session.token}"
+                return@runCatching "$base/Items/$parent/Images/Backdrop/0?maxWidth=640&tag=${ptags.optString(0)}&api_key=${session.token}"
             }
         }
         null

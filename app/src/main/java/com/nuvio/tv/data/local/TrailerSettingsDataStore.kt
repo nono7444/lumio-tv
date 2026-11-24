@@ -37,7 +37,7 @@ class TrailerSettingsDataStore @Inject constructor(
     val settings: Flow<TrailerSettings> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
             TrailerSettings(
-                enabled = prefs[enabledKey] ?: true,
+                enabled = prefs[enabledKey] ?: !com.nuvio.tv.lumio.LumioMode.ENABLED, // Lumio : pas de bande-annonce auto (fluidité)
                 delaySeconds = prefs[delaySecondsKey] ?: 7,
                 playInBackground = prefs[playInBackgroundKey] ?: false,
                 pauseOnScroll = prefs[pauseOnScrollKey] ?: true,

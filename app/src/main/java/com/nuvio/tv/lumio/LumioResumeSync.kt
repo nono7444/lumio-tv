@@ -41,7 +41,7 @@ class LumioResumeSync @Inject constructor(
 
     fun start() {
         if (!LumioMode.ENABLED) return
-        // Tout de suite à chaque changement de profil ou de serveur, puis toutes les minutes
+        // Tout de suite à chaque changement de profil ou de serveur, puis toutes les 3 minutes
         scope.launch {
             repository.uiState
                 .map { state -> state.enabledConnections.map { it.id } }
@@ -134,8 +134,8 @@ class LumioResumeSync @Inject constructor(
         const val TAG = "LumioResumeSync"
         const val LIMIT = 60
         const val INITIAL_DELAY_MS = 4_000L
-        const val INTERVAL_MS = 60_000L
-        const val LIBRARY_EVERY = 30 // 30 × 1 min = toutes les 30 min
+        const val INTERVAL_MS = 3 * 60_000L // toutes les 3 min (moins de travail en fond)
+        const val LIBRARY_EVERY = 10 // 10 × 3 min = toutes les 30 min
         const val MIN_DURATION_MS = 10 * 60_000L
         const val MIN_SHARE = 0.08f
         const val MAX_SHARE = 0.85f

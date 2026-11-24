@@ -198,7 +198,7 @@ fun LumioRankBadge(visible: Boolean, modifier: Modifier = Modifier, onOpen: () -
         kotlinx.coroutines.delay(1_500) // l'accueil d'abord
         while (true) {
             online = runCatching { LumioClient.get(context).me() }.isSuccess
-            kotlinx.coroutines.delay(60_000)
+            kotlinx.coroutines.delay(5 * 60_000L) // pastille serveur : toutes les 5 min
         }
     }
     val up = online ?: return
