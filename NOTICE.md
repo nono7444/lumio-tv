@@ -56,3 +56,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Séries en cours : les épisodes annoncés sur TMDB mais pas encore sur le serveur s'affichent grisés après le dernier épisode (et la saison qui démarre), avec « Sortie le … » à la place de « Indisponible » ; ils ne se lancent pas (fichiers MetaDetailsViewModel.kt, EpisodesSection.kt).
 - Fiche : bouton « DL » (téléchargement direct Lumio Secour) retiré ; il reste « Lire », « Télécharger » ou « Demander » (fichier HeroSection.kt).
 - Icône, bannière et logo de démarrage : ceux de NuvioTV d'origine, avec « NUVIO TV » (toutes les variantes de couleur et de saison) (dossiers res/mipmap-*, res/drawable-nodpi).
+- Accueil instantané : une copie des rangées de l'accueil est gardée sur la box (fichier LumioHomeSnapshot.kt, propre à Lumio) et affichée dès le lancement, puis chaque rangée est remplacée par la version fraîche de Jellyfin (branché dans HomeViewModelCatalogPipeline.kt).

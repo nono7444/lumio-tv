@@ -209,6 +209,26 @@ internal suspend fun HomeViewModel.loadAllCatalogsPipeline(
 
         rebuildCatalogOrder(addons)
 
+        // Lumio : premier chargement → la dernière copie des rangées s'affiche tout de suite, la version fraîche
+        // remplace chaque rangée dès qu'elle arrive
+        if (!isReload && com.nuvio.tv.lumio.LumioMode.ENABLED) {
+            val profileId = profileManager.activeProfileId.value
+            val cached = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.nuvio.tv.lumio.LumioHomeSnapshot.load(appContext, profileId)
+            }
+            val order = synchronized(catalogStateLock) { catalogOrder.toSet() }
+            var restored = 0
+            for ((key, row) in cached) {
+                if (key !in order) continue
+                replaceCatalogRow(key, row)
+                restored++
+            }
+            if (restored > 0) {
+                _uiState.update { it.copy(isLoading = false) }
+                scheduleUpdateCatalogRows()
+            }
+        }
+
         // Hero has its own catalog sources (heroCatalogKeys) configured
         // independently in Layout Settings.  When the user has explicitly
         // selected hero catalogs, load those even if they are disabled from
@@ -467,6 +487,7 @@ internal fun HomeViewModel.loadCatalogPipeline(
                         )
                         if (pendingCatalogLoads == 0) {
                             catalogsLoadInProgress = false
+                            saveLumioHomeSnapshot()
                         }
                         // Batch updates: only trigger a UI rebuild when all
                         // eager catalogs have completed, or let the debounce
@@ -1200,5 +1221,17 @@ internal fun HomeViewModel.refreshVisibleCatalogsPipeline(requestedByUser: Boole
     pendingCatalogLoads += toRefresh.size
     toRefresh.forEach { (addon, catalog) ->
         loadCatalogPipeline(addon, catalog, generation, isRefresh = true, requestedByUser = requestedByUser, forceReplace = forceReplace)
+    }
+}
+
+/** Lumio : garde une copie des rangées de l'accueil sur la box (affichage immédiat au prochain lancement). */
+internal fun HomeViewModel.saveLumioHomeSnapshot() {
+    if (!com.nuvio.tv.lumio.LumioMode.ENABLED) return
+    val rows = synchronized(catalogStateLock) {
+        catalogOrder.mapNotNull { key -> catalogsMap[key]?.let { key to it } }
+    }
+    val profileId = profileManager.activeProfileId.value
+    viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        com.nuvio.tv.lumio.LumioHomeSnapshot.save(appContext, profileId, rows)
     }
 }
