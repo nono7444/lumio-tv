@@ -57,3 +57,5 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Fiche : bouton « DL » (téléchargement direct Lumio Secour) retiré ; il reste « Lire », « Télécharger » ou « Demander » (fichier HeroSection.kt).
 - Icône, bannière et logo de démarrage : ceux de NuvioTV d'origine, avec « NUVIO TV » (toutes les variantes de couleur et de saison) (dossiers res/mipmap-*, res/drawable-nodpi).
 - Accueil instantané : une copie des rangées de l'accueil est gardée sur la box (fichier LumioHomeSnapshot.kt, propre à Lumio) et affichée dès le lancement, puis chaque rangée est remplacée par la version fraîche de Jellyfin (branché dans HomeViewModelCatalogPipeline.kt).
+- Fluidité : défilement vertical (monter / descendre d'une rangée) bien plus rapide, ressort plus ferme en mode Lumio (NuvioScrollDefaults.kt).
+- Logo et bannière : triangle Nuvio avec « lumio TV » (res/drawable-nodpi/app_logo_wordmark*.png, res/mipmap-xhdpi/banner*.png).

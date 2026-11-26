@@ -13,7 +13,9 @@ object NuvioScrollDefaults {
         @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override val scrollAnimationSpec: AnimationSpec<Float> = spring(
             dampingRatio = 0.95f,
-            stiffness = NuvioMotion.tokens.durations.fast.toFloat()
+            // Lumio : ressort bien plus ferme (≈ 0,2 s au lieu de ≈ 0,7 s) → monter / descendre d'une rangée est
+            // immédiat, sans que tout l'écran glisse longtemps pendant que les affiches se chargent
+            stiffness = if (com.nuvio.tv.lumio.LumioMode.ENABLED) 1400f else NuvioMotion.tokens.durations.fast.toFloat()
         )
 
         override fun calculateScrollDistance(
