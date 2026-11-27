@@ -196,7 +196,9 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
         val cached = if (reload == 0) cachedChannels(context, src) else null
         if (cached != null) {
             show(cached.first)
-            if (System.currentTimeMillis() - cached.second < 6 * 3600_000) return@LaunchedEffect
+            // Serveur Lumio : liste rafraîchie toutes les 30 min (les matchs du jour changent) ; autres listes : 6 h
+            val maxAge = if (src.id.startsWith("lumio-relay")) 30 * 60_000L else 6 * 3600_000L
+            if (System.currentTimeMillis() - cached.second < maxAge) return@LaunchedEffect
         } else if (reload == 0) {
             channels = null
             group = null

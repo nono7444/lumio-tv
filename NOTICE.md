@@ -61,3 +61,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Logo et bannière : triangle Nuvio avec « lumio TV » (res/drawable-nodpi/app_logo_wordmark*.png, res/mipmap-xhdpi/banner*.png).
 - Live TV : un message d'erreur n'affiche plus jamais l'adresse de la liste (elle contient les identifiants IPTV) (LumioLiveScreen.kt).
 - Live TV : sources et chaînes gardées sur la box et affichées tout de suite, mises à jour en arrière-plan ; catégories du serveur Lumio dans son ordre (LumioLiveScreen.kt).
+- Live TV : la liste du serveur Lumio (avec la catégorie « Matchs du jour ») est rafraîchie toutes les 30 min en arrière-plan (LumioLiveScreen.kt).
