@@ -59,3 +59,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Accueil instantané : une copie des rangées de l'accueil est gardée sur la box (fichier LumioHomeSnapshot.kt, propre à Lumio) et affichée dès le lancement, puis chaque rangée est remplacée par la version fraîche de Jellyfin (branché dans HomeViewModelCatalogPipeline.kt).
 - Fluidité : défilement vertical (monter / descendre d'une rangée) bien plus rapide, ressort plus ferme en mode Lumio (NuvioScrollDefaults.kt).
 - Logo et bannière : triangle Nuvio avec « lumio TV » (res/drawable-nodpi/app_logo_wordmark*.png, res/mipmap-xhdpi/banner*.png).
+- Live TV : un message d'erreur n'affiche plus jamais l'adresse de la liste (elle contient les identifiants IPTV) (LumioLiveScreen.kt).

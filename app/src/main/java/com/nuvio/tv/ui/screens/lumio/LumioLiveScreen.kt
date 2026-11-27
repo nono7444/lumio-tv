@@ -115,7 +115,12 @@ private suspend fun loadChannels(context: Context, src: LiveSourceInfo, force: B
         conn.connectTimeout = 15_000
         conn.readTimeout = 60_000
         conn.setRequestProperty("User-Agent", "Lumio TV")
-        val body = try { conn.inputStream.bufferedReader().use { it.readText() } } finally { conn.disconnect() }
+        val body = try {
+            val code = conn.responseCode
+            // Jamais l'adresse dans le message : elle contient les identifiants IPTV
+            if (code !in 200..299) throw java.io.IOException("le fournisseur répond $code")
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally { conn.disconnect() }
         runCatching { cache.writeText(body) }
         body
     }
@@ -160,7 +165,7 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
                     else -> groups.firstOrNull(::isFrench) ?: groups.firstOrNull() ?: ALL
                 }
             }
-            .onFailure { error = "Liste impossible à lire : ${it.message}" }
+            .onFailure { error = "Liste impossible à lire : ${(it.message ?: "erreur").replace(Regex("""https?://\S+"""), "(lien masqué)")}" }
     }
 
     fun toggleFavorite(ch: LiveChannel) {
