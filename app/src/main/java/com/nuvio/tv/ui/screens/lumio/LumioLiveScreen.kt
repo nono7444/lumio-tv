@@ -7,6 +7,7 @@ package com.nuvio.tv.ui.screens.lumio
 // Chaînes groupées (France d'abord), favoris, lecture dans le lecteur de Lumio TV.
 
 import android.content.Context
+import org.json.JSONObject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,9 +107,19 @@ private fun parseM3u(text: String, sourceId: String, max: Int = 30_000): List<Li
 
 private fun isFrench(group: String) = Regex("""\b(fr|france|français|french)\b""", RegexOption.IGNORE_CASE).containsMatchIn(group)
 
-/** Liste téléchargée gardée 6 h sur la TV (les grosses listes IPTV sont lentes à récupérer). */
+/** Liste gardée sur la box (dossier des fichiers, pas le cache vidé par Android) : affichée tout de suite au lancement. */
+private fun liveCacheFile(context: Context, src: LiveSourceInfo) =
+    File(context.filesDir, "live2-${src.id.ifBlank { "x" }}-${src.url.hashCode()}.m3u")
+
+/** Chaînes déjà gardées sur la box (même anciennes), ou null. */
+private suspend fun cachedChannels(context: Context, src: LiveSourceInfo): Pair<List<LiveChannel>, Long>? = withContext(Dispatchers.IO) {
+    val f = liveCacheFile(context, src)
+    if (!f.exists()) null else runCatching { parseM3u(f.readText(), src.id) to f.lastModified() }.getOrNull()
+}
+
+/** Télécharge la liste (et la garde sur la box). */
 private suspend fun loadChannels(context: Context, src: LiveSourceInfo, force: Boolean): List<LiveChannel> = withContext(Dispatchers.IO) {
-    val cache = File(context.cacheDir, "live-${src.id.ifBlank { src.url.hashCode().toString() }}.m3u")
+    val cache = liveCacheFile(context, src)
     val fresh = cache.exists() && System.currentTimeMillis() - cache.lastModified() < 6 * 3600_000
     val text = if (fresh && !force) cache.readText() else {
         val conn = URL(src.url).openConnection() as HttpURLConnection
@@ -140,32 +151,59 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
     var favorites by remember { mutableStateOf(prefs.getStringSet("favorites", emptySet())!!.toSet()) }
     var reload by remember { mutableStateOf(0) }
 
+    fun parseSources(json: JSONObject): List<LiveSourceInfo> {
+        val arr = json.optJSONArray("sources")
+        return (0 until (arr?.length() ?: 0)).mapNotNull { i ->
+            arr!!.optJSONObject(i)?.let { LiveSourceInfo(it.optString("id"), it.optString("name"), it.optString("kind"), it.optString("url")) }
+        }.filter { it.kind == "m3u" }
+    }
+    fun pickSource(list: List<LiveSourceInfo>) = list.firstOrNull { it.id == prefs.getString("source", null) } ?: list.firstOrNull()
+
     LaunchedEffect(Unit) {
+        // Sources gardées sur la box : la liste s'affiche sans attendre le serveur
+        prefs.getString("sources_json", null)?.let { saved ->
+            runCatching { parseSources(JSONObject(saved)) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { list ->
+                sources = list
+                source = pickSource(list)
+            }
+        }
         runCatching { client.liveSources() }
             .onSuccess { json ->
-                val arr = json.optJSONArray("sources")
-                val list = (0 until (arr?.length() ?: 0)).mapNotNull { i ->
-                    arr!!.optJSONObject(i)?.let { LiveSourceInfo(it.optString("id"), it.optString("name"), it.optString("kind"), it.optString("url")) }
-                }.filter { it.kind == "m3u" }
-                sources = list
-                source = list.firstOrNull { it.id == prefs.getString("source", null) } ?: list.firstOrNull()
-            }
-            .onFailure { error = it.message ?: "Serveur Lumio injoignable"; sources = emptyList() }
-    }
-    LaunchedEffect(source?.id, reload) {
-        val src = source ?: return@LaunchedEffect
-        channels = null
-        error = null
-        runCatching { loadChannels(context, src, force = reload > 0) }
-            .onSuccess { list ->
-                channels = list
-                val groups = list.map { it.group }.distinct()
-                group = when {
-                    favorites.any { f -> list.any { it.key == f } } -> FAVORITES
-                    else -> groups.firstOrNull(::isFrench) ?: groups.firstOrNull() ?: ALL
+                val list = parseSources(json)
+                prefs.edit().putString("sources_json", json.toString()).apply()
+                if (list != sources) {
+                    sources = list
+                    val keep = list.firstOrNull { it.id == source?.id && it.url == source?.url }
+                    source = keep ?: pickSource(list)
                 }
             }
-            .onFailure { error = "Liste impossible à lire : ${(it.message ?: "erreur").replace(Regex("""https?://\S+"""), "(lien masqué)")}" }
+            .onFailure { if (sources.isNullOrEmpty()) { error = it.message ?: "Serveur Lumio injoignable"; sources = emptyList() } }
+    }
+    LaunchedEffect(source?.id, source?.url, reload) {
+        val src = source ?: return@LaunchedEffect
+        error = null
+        fun show(list: List<LiveChannel>) {
+            channels = list
+            val groups = list.map { it.group }.distinct()
+            val g0 = group
+            if (g0 == null || g0 !in groups + listOf(FAVORITES, ALL)) group = when {
+                favorites.any { f -> list.any { it.key == f } } -> FAVORITES
+                src.id.startsWith("lumio-relay") -> groups.firstOrNull() ?: ALL
+                else -> groups.firstOrNull(::isFrench) ?: groups.firstOrNull() ?: ALL
+            }
+        }
+        // 1. Ce qui est gardé sur la box, tout de suite ; 2. la version fraîche en arrière-plan si elle a plus de 6 h
+        val cached = if (reload == 0) cachedChannels(context, src) else null
+        if (cached != null) {
+            show(cached.first)
+            if (System.currentTimeMillis() - cached.second < 6 * 3600_000) return@LaunchedEffect
+        } else if (reload == 0) {
+            channels = null
+            group = null
+        }
+        runCatching { loadChannels(context, src, force = true) }
+            .onSuccess { show(it) }
+            .onFailure { if (cached == null) error = "Liste impossible à lire : ${(it.message ?: "erreur").replace(Regex("""https?://\S+"""), "(lien masqué)")}" }
     }
 
     fun toggleFavorite(ch: LiveChannel) {
@@ -204,7 +242,10 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
             return@Column
         }
         val groups = remember(all, favorites) {
-            val g = all.map { it.group }.distinct().sortedWith(compareBy({ !isFrench(it) }, { it.lowercase() }))
+            // Sources du serveur Lumio : catégories dans l'ordre du serveur (Généralistes, 4K, Sport…)
+            val g = all.map { it.group }.distinct().let { d ->
+                if (source?.id?.startsWith("lumio-relay") == true) d else d.sortedWith(compareBy({ !isFrench(it) }, { it.lowercase() }))
+            }
             listOfNotNull(FAVORITES.takeIf { favorites.isNotEmpty() }, ALL) + g
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 4.dp)) {

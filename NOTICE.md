@@ -60,3 +60,4 @@ Le code source complet est disponible dans ce dépôt, conformément à la GPL v
 - Fluidité : défilement vertical (monter / descendre d'une rangée) bien plus rapide, ressort plus ferme en mode Lumio (NuvioScrollDefaults.kt).
 - Logo et bannière : triangle Nuvio avec « lumio TV » (res/drawable-nodpi/app_logo_wordmark*.png, res/mipmap-xhdpi/banner*.png).
 - Live TV : un message d'erreur n'affiche plus jamais l'adresse de la liste (elle contient les identifiants IPTV) (LumioLiveScreen.kt).
+- Live TV : sources et chaînes gardées sur la box et affichées tout de suite, mises à jour en arrière-plan ; catégories du serveur Lumio dans son ordre (LumioLiveScreen.kt).
