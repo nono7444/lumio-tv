@@ -15,10 +15,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -148,6 +150,51 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
     var channels by remember { mutableStateOf<List<LiveChannel>?>(null) }
     var group by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Chaîne du serveur Lumio en cours de mise en réserve (animation avant d'ouvrir le lecteur)
+    var warming by remember { mutableStateOf<LiveChannel?>(null) }
+    var warmBuffered by remember { mutableStateOf(0f) }
+    var warmWant by remember { mutableStateOf(15f) }
+    var warmError by remember { mutableStateOf<String?>(null) }
+    fun play(ch: LiveChannel) {
+        if (warming != null) return
+        if (ch.url.contains("/api/iptv/r/") && ch.url.endsWith(".ts")) {
+            warmBuffered = 0f
+            warmError = null
+            warming = ch
+        } else onPlay(ch)
+    }
+    LaunchedEffect(warming) {
+        val ch = warming ?: return@LaunchedEffect
+        val base = ch.url.removeSuffix(".ts")
+        val result = withContext(Dispatchers.IO) {
+            runCatching {
+                fun get(u: String): Pair<Int, String> {
+                    val c = URL(u).openConnection() as HttpURLConnection
+                    c.connectTimeout = 15_000
+                    c.readTimeout = 30_000
+                    return try {
+                        val code = c.responseCode
+                        code to ((if (code in 200..299) c.inputStream else c.errorStream)?.bufferedReader()?.use { it.readText() } ?: "")
+                    } finally { c.disconnect() }
+                }
+                val (wc, wb) = get("$base/warm")
+                if (wc !in 200..299) throw IllegalStateException(runCatching { JSONObject(wb).optString("error") }.getOrNull()?.ifBlank { null } ?: "Erreur $wc")
+                val t0 = System.currentTimeMillis()
+                while (warming === ch) {
+                    val st = JSONObject(get("$base/state").second)
+                    st.optString("error").takeIf { it.isNotBlank() && it != "null" }?.let { throw IllegalStateException(it) }
+                    warmBuffered = st.optDouble("buffered", 0.0).toFloat()
+                    warmWant = st.optDouble("want", 15.0).toFloat()
+                    if (st.optBoolean("ready") || (!st.optBoolean("open") && System.currentTimeMillis() - t0 > 3000) || System.currentTimeMillis() - t0 > 60_000) break
+                    Thread.sleep(400)
+                }
+            }
+        }
+        if (warming !== ch) return@LaunchedEffect
+        result.onSuccess { warming = null; onPlay(ch) }
+            .onFailure { warmError = it.message ?: "Chaîne indisponible" }
+    }
+    androidx.activity.compose.BackHandler(enabled = warming != null) { warming = null }
     var favorites by remember { mutableStateOf(prefs.getStringSet("favorites", emptySet())!!.toSet()) }
     var reload by remember { mutableStateOf(0) }
 
@@ -213,6 +260,7 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
         prefs.edit().putStringSet("favorites", favorites).apply()
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize().padding(start = 48.dp, end = 48.dp, top = 28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Live TV", style = MaterialTheme.typography.headlineLarge, color = NuvioTheme.colors.TextPrimary)
         val list = sources
@@ -270,7 +318,7 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
             items(shown, key = { it.key }) { ch ->
                 val shape = RoundedCornerShape(14.dp)
                 Card(
-                    onClick = { onPlay(ch) },
+                    onClick = { play(ch) },
                     onLongClick = { toggleFavorite(ch) },
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 11f),
                     shape = CardDefaults.shape(shape),
@@ -298,6 +346,35 @@ fun LumioLiveScreen(onPlay: (LiveChannel) -> Unit) {
                 }
             }
         }
+    }
+    warming?.let { ch ->
+        // Mise en réserve : spinner Google, progression en quatre couleurs, « Retour » pour annuler
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xF2000000)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                if (warmError == null) LumioGoogleSpinner(size = 84.dp, stroke = 7.dp)
+                Text(ch.name, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                if (warmError != null) {
+                    Text(warmError ?: "", color = Color(0xFFFF8A80), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
+                    Text("Retour pour revenir aux chaînes", color = Color(0x99FFFFFF), style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text(
+                        "Mise en réserve contre les coupures… ${warmBuffered.toInt()} / ${warmWant.toInt()} s",
+                        color = Color(0xCCFFFFFF),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.width(320.dp).height(8.dp)) {
+                        LumioGoogleColors.forEachIndexed { i, c ->
+                            val part = ((warmBuffered / warmWant.coerceAtLeast(1f)) * 4f - i).coerceIn(0f, 1f)
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color(0x26FFFFFF), RoundedCornerShape(4.dp))) {
+                                Box(modifier = Modifier.fillMaxWidth(part).fillMaxHeight().background(c, RoundedCornerShape(4.dp)))
+                            }
+                        }
+                    }
+                    Text("Retour pour annuler", color = Color(0x80FFFFFF), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
     }
 }
 
